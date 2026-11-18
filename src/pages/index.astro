@@ -9,13 +9,23 @@ import "../styles/global.css";
   </head>
   <body>
     <header>
-      <strong>Hoerbiger Reports</strong>
-      <form id="connect-form">
-        <label>Password <input id="password" type="password" placeholder="Password..." autocomplete="current-password" required /></label>
-        <button id="login-btn" type="submit">Login</button>
-      </form>
-      <button id="logout-btn" type="button" hidden>Logout</button>
-      <span id="status-text" role="status">Not connected</span>
+      <div class="header-brand">
+        <span class="brand-icon" aria-hidden="true">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M6 3h8l4 4v14H6z" />
+            <path d="M14 3v4h4M9 12h6M9 16h6" />
+          </svg>
+        </span>
+        <strong>Hoerbiger Reports</strong>
+      </div>
+      <div class="header-actions">
+        <span id="status-text" role="status">Not connected</span>
+        <form id="connect-form">
+          <input id="password" type="password" placeholder="Password..." aria-label="Password" autocomplete="current-password" required />
+          <button id="login-btn" type="submit">Login</button>
+        </form>
+        <button id="logout-btn" type="button" hidden>Logout</button>
+      </div>
     </header>
 
     <div id="toolbar">
