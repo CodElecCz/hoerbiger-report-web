@@ -67,6 +67,7 @@ th.nosort:hover { background: #f8fafc; }
 td.name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 td.name .name-content { display: flex; align-items: center; gap: 10px; min-width: 0; }
 td.name .label { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#browser-pane.compact td.name .label { overflow: visible; text-overflow: clip; white-space: normal; overflow-wrap: anywhere; }
 td.dir .label { font-weight: 700; color: #0f172a; }
 td svg { flex: none; width: 20px; height: 20px; }
 tbody tr { cursor: pointer; user-select: none; transition: background 0.12s; }
@@ -113,9 +114,10 @@ tbody tr.selected, tbody tr.cursor { background: #e0f2fe; }
 .adj-card summary:hover { background: #185a7b; }
 .adj-card-body { padding: 12px 14px; }
 .adj-card-body p { margin: 0 0 8px; }
-.adj-header-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr)); gap: 12px; }
+.adj-header-grid { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 12px; }
+.adj-header-grid > div { min-width: 0; max-width: 100%; }
 #viewer-body .adj-header-grid h3 { margin: 12px 0 6px; }
-#viewer-body .adj-card table { width: auto; min-width: min(100%, 380px); max-width: 100%; table-layout: auto; font-size: 12px; }
+#viewer-body .adj-card table { width: auto; max-width: 100%; table-layout: auto; font-size: 12px; }
 #viewer-body .adj-card th, #viewer-body .adj-card td { padding: 5px 8px; border: 1px solid #d5dde6; white-space: normal; overflow-wrap: anywhere; }
 #viewer-body .adj-card th { position: static; background: #e7f1f9; cursor: default; }
 #viewer-body .adj-card tbody tr { cursor: default; }
