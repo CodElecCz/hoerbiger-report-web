@@ -88,6 +88,20 @@ export async function listFolderContents(folderId: string): Promise<DriveItem[]>
   }));
 }
 
+export interface StorageInfo {
+  used: number;
+  limit: number | null;
+}
+
+export async function getStorageInfo(): Promise<StorageInfo> {
+  const res = await driveGet("https://www.googleapis.com/drive/v3/about?fields=storageQuota");
+  const { storageQuota } = await res.json();
+  return {
+    used: Number(storageQuota?.usage ?? 0),
+    limit: storageQuota?.limit ? Number(storageQuota.limit) : null,
+  };
+}
+
 export async function readFileText(fileId: string): Promise<string> {
   const res = await driveGet(`https://www.googleapis.com/drive/v3/files/${encodeURIComponent(fileId)}?alt=media`);
   return await res.text();

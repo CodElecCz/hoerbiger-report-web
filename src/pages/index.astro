@@ -8,26 +8,35 @@
     <style>
       * { box-sizing: border-box; font-family: system-ui, -apple-system, sans-serif; }
       body { margin: 0; display: flex; flex-direction: column; height: 100vh; color: #1e293b; }
-      header { display: flex; gap: 12px; align-items: center; padding: 10px 16px; background: #0f172a; color: #fff; }
-      header button { padding: 6px 12px; border-radius: 4px; border: none; background: #2563eb; color: #fff; cursor: pointer; font-weight: 500; }
-      header button:disabled { background: #475569; cursor: default; }
-      #toolbar { display: flex; gap: 10px; align-items: center; padding: 8px 16px; background: #f1f5f9; border-bottom: 1px solid #cbd5e1; }
-      #breadcrumbs { display: flex; gap: 6px; align-items: center; flex: 1; font-size: 14px; flex-wrap: wrap; }
-      .crumb { color: #2563eb; cursor: pointer; text-decoration: underline; background: none; border: none; padding: 0; font-size: 14px; }
-      .crumb:last-child { color: #0f172a; text-decoration: none; font-weight: 600; cursor: default; }
-      #filter-input { padding: 5px 10px; border: 1px solid #94a3b8; border-radius: 4px; width: 240px; }
+      header { display: flex; gap: 12px; align-items: center; padding: 8px 16px; background: #0f172a; color: #fff; }
+      header button, #refresh-btn { padding: 5px 12px; border-radius: 4px; border: none; background: #2563eb; color: #fff; cursor: pointer; font-weight: 500; }
+      header button:disabled, #refresh-btn:disabled { background: #475569; cursor: default; }
+      #toolbar { display: flex; gap: 10px; align-items: center; padding: 6px 16px; background: #f1f5f9; border-bottom: 1px solid #cbd5e1; }
+      #breadcrumbs { display: flex; gap: 4px; align-items: center; flex: 1; font-size: 13px; flex-wrap: wrap; font-family: Consolas, monospace; }
+      #breadcrumbs span { color: #64748b; }
+      .crumb { color: #2563eb; cursor: pointer; background: none; border: none; padding: 0; font-size: 13px; font-family: Consolas, monospace; }
+      .crumb:hover { text-decoration: underline; }
+      .crumb:last-child { color: #0f172a; font-weight: 600; cursor: default; text-decoration: none; }
+      #filter-input { padding: 4px 10px; border: 1px solid #94a3b8; border-radius: 4px; width: 220px; }
       main { display: flex; flex: 1; overflow: hidden; }
-      #browser-pane { width: 42%; overflow: auto; border-right: 1px solid #cbd5e1; }
-      table { width: 100%; border-collapse: collapse; font-size: 13px; }
-      th, td { padding: 7px 10px; border-bottom: 1px solid #e2e8f0; text-align: left; }
-      th { background: #f8fafc; position: sticky; top: 0; z-index: 1; }
-      tr:hover { background: #e0f2fe; cursor: pointer; }
-      tr.selected { background: #bae6fd; }
-      #viewer-pane { flex: 1; display: flex; flex-direction: column; overflow: hidden; padding: 12px 16px; }
+      #browser-pane { width: 48%; min-width: 420px; display: flex; flex-direction: column; border-right: 1px solid #cbd5e1; }
+      #list-scroll { flex: 1; overflow: auto; outline: none; }
+      table { width: 100%; border-collapse: collapse; font-size: 13px; font-family: Consolas, monospace; table-layout: fixed; }
+      th, td { padding: 2px 8px; border-right: 1px solid #e2e8f0; text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+      th { background: #f8fafc; position: sticky; top: 0; z-index: 1; cursor: pointer; user-select: none; border-bottom: 1px solid #cbd5e1; font-family: system-ui, sans-serif; font-weight: 600; }
+      th:hover { background: #e2e8f0; }
+      th.num, td.num { text-align: right; }
+      td.dir { color: #0f172a; font-weight: 600; }
+      tbody tr { cursor: default; }
+      tbody tr:hover { background: #f0f9ff; }
+      tbody tr.cursor { background: #bae6fd; outline: 1px solid #0284c7; outline-offset: -1px; }
+      #viewer-pane { flex: 1; display: flex; flex-direction: column; overflow: hidden; padding: 10px 16px; }
       #viewer-header { font-weight: 600; margin-bottom: 8px; padding-bottom: 6px; border-bottom: 1px solid #e2e8f0; }
       #viewer-body { flex: 1; overflow: auto; }
       pre { margin: 0; font-family: Consolas, monospace; font-size: 12px; white-space: pre-wrap; }
       iframe { width: 100%; height: 100%; border: none; }
+      footer { display: flex; justify-content: space-between; gap: 16px; padding: 4px 16px; background: #0f172a; color: #cbd5e1; font-size: 12px; font-family: Consolas, monospace; }
+      #hint { color: #94a3b8; font-size: 11px; font-family: system-ui, sans-serif; }
     </style>
   </head>
   <body>
@@ -45,16 +54,27 @@
 
     <main>
       <div id="browser-pane">
-        <table>
-          <thead>
-            <tr>
-              <th>Name</th>
-              <th style="width: 150px;">Modified</th>
-              <th style="width: 80px;">Size</th>
-            </tr>
-          </thead>
-          <tbody id="file-list"></tbody>
-        </table>
+        <div id="list-scroll" tabindex="0">
+          <table>
+            <colgroup>
+              <col />
+              <col style="width: 70px;" />
+              <col style="width: 90px;" />
+              <col style="width: 100px;" />
+              <col style="width: 70px;" />
+            </colgroup>
+            <thead>
+              <tr>
+                <th data-sort="name">Name</th>
+                <th data-sort="ext">Ext</th>
+                <th data-sort="size" class="num">Size</th>
+                <th data-sort="date">Date</th>
+                <th data-sort="time">Time</th>
+              </tr>
+            </thead>
+            <tbody id="file-list"></tbody>
+          </table>
+        </div>
       </div>
 
       <div id="viewer-pane">
@@ -63,34 +83,79 @@
       </div>
     </main>
 
+    <footer>
+      <span id="summary">&nbsp;</span>
+      <span id="hint">↑↓ move · Enter open · Backspace up · Home/End</span>
+      <span id="free-space">Free: -</span>
+    </footer>
+
     <script>
       import {
         ROOT_FOLDER_ID,
         signInWithGoogle,
         listFolderContents,
         readFileText,
+        getStorageInfo,
         type DriveItem,
       } from "../lib/driveBrowser";
+
+      type SortKey = "name" | "ext" | "size" | "date" | "time";
+      type Row = { up: true } | { up: false; item: DriveItem };
 
       const loginBtn = document.getElementById("login-btn") as HTMLButtonElement;
       const statusText = document.getElementById("status-text")!;
       const breadcrumbsEl = document.getElementById("breadcrumbs")!;
       const filterInput = document.getElementById("filter-input") as HTMLInputElement;
       const refreshBtn = document.getElementById("refresh-btn") as HTMLButtonElement;
+      const listScroll = document.getElementById("list-scroll")!;
       const fileListEl = document.getElementById("file-list")!;
       const viewerHeader = document.getElementById("viewer-header")!;
       const viewerBody = document.getElementById("viewer-body")!;
+      const summaryEl = document.getElementById("summary")!;
+      const freeSpaceEl = document.getElementById("free-space")!;
 
       let folderStack: { id: string; name: string }[] = [{ id: ROOT_FOLDER_ID, name: "Reports" }];
       let currentItems: DriveItem[] = [];
-      let selectedId: string | null = null;
+      let rows: Row[] = [];
+      let cursor = 0;
+      let sortKey: SortKey = "name";
+      let sortDir: 1 | -1 = -1;
 
-      function formatSize(bytes?: string): string {
-        if (!bytes) return "-";
-        const n = Number(bytes);
-        if (n < 1024) return `${n} B`;
-        if (n < 1024 * 1024) return `${(n / 1024).toFixed(1)} KB`;
-        return `${(n / (1024 * 1024)).toFixed(1)} MB`;
+      function formatSize(bytes: number): string {
+        if (bytes < 1024) return `${bytes} B`;
+        if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+        if (bytes < 1024 ** 3) return `${(bytes / 1024 ** 2).toFixed(1)} MB`;
+        return `${(bytes / 1024 ** 3).toFixed(2)} GB`;
+      }
+
+      function splitName(item: DriveItem): { base: string; ext: string } {
+        if (item.isFolder) return { base: item.name, ext: "" };
+        const dot = item.name.lastIndexOf(".");
+        return dot > 0 ? { base: item.name.slice(0, dot), ext: item.name.slice(dot + 1) } : { base: item.name, ext: "" };
+      }
+
+      function compare(a: DriveItem, b: DriveItem): number {
+        if (a.isFolder !== b.isFolder) return a.isFolder ? -1 : 1;
+        let r = 0;
+        switch (sortKey) {
+          case "ext":
+            r = splitName(a).ext.localeCompare(splitName(b).ext, undefined, { sensitivity: "base" });
+            break;
+          case "size":
+            r = Number(a.size ?? 0) - Number(b.size ?? 0);
+            break;
+          case "date":
+          case "time": {
+            const ta = new Date(a.modifiedTime).getTime();
+            const tb = new Date(b.modifiedTime).getTime();
+            r = sortKey === "date" ? ta - tb : (ta % 86400000) - (tb % 86400000);
+            break;
+          }
+          default:
+            r = 0;
+        }
+        if (r === 0) r = a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: "base" });
+        return r * sortDir;
       }
 
       function renderBreadcrumbs() {
@@ -114,34 +179,95 @@
         });
       }
 
+      function cell(text: string, cls = ""): HTMLTableCellElement {
+        const td = document.createElement("td");
+        td.textContent = text;
+        if (cls) td.className = cls;
+        td.title = text;
+        return td;
+      }
+
       function renderTable() {
         const needle = filterInput.value.trim().toLowerCase();
-        const filtered = needle
-          ? currentItems.filter((item) => item.name.toLowerCase().includes(needle))
-          : currentItems;
+        const visible = (needle
+          ? currentItems.filter((i) => i.name.toLowerCase().includes(needle))
+          : [...currentItems]
+        ).sort(compare);
+
+        rows = [];
+        if (folderStack.length > 1) rows.push({ up: true });
+        for (const item of visible) rows.push({ up: false, item });
+        cursor = Math.min(Math.max(cursor, 0), Math.max(rows.length - 1, 0));
 
         fileListEl.innerHTML = "";
-        for (const item of filtered) {
+        rows.forEach((row, idx) => {
           const tr = document.createElement("tr");
-          if (item.id === selectedId) tr.className = "selected";
+          if (idx === cursor) tr.className = "cursor";
 
-          const icon = item.isFolder ? "📁" : "📄";
-          const dateStr = new Date(item.modifiedTime).toLocaleString();
-          tr.innerHTML = `
-            <td>${icon} ${item.name}</td>
-            <td>${dateStr}</td>
-            <td>${item.isFolder ? "-" : formatSize(item.size)}</td>
-          `;
+          if (row.up) {
+            tr.append(cell("[..]", "dir"), cell(""), cell("<UP-DIR>", "num"), cell(""), cell(""));
+          } else {
+            const { item } = row;
+            const { base, ext } = splitName(item);
+            const d = new Date(item.modifiedTime);
+            tr.append(
+              cell(item.isFolder ? `[${base}]` : base, item.isFolder ? "dir" : ""),
+              cell(ext),
+              cell(item.isFolder ? "<DIR>" : formatSize(Number(item.size ?? 0)), "num"),
+              cell(d.toLocaleDateString(undefined, { year: "numeric", month: "2-digit", day: "2-digit" })),
+              cell(d.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" })),
+            );
+          }
 
-          tr.onclick = () => {
-            if (item.isFolder) {
-              folderStack.push({ id: item.id, name: item.name });
-              loadCurrentFolder();
-            } else {
-              openFile(item);
-            }
-          };
+          tr.onclick = () => setCursor(idx);
+          tr.ondblclick = () => openRow(idx);
           fileListEl.appendChild(tr);
+        });
+
+        document.querySelectorAll<HTMLElement>("th[data-sort]").forEach((th) => {
+          const label = th.dataset.label ?? (th.dataset.label = th.textContent ?? "");
+          th.textContent = th.dataset.sort === sortKey ? `${label} ${sortDir === 1 ? "▲" : "▼"}` : label;
+        });
+
+        renderSummary(visible);
+      }
+
+      function renderSummary(visible: DriveItem[]) {
+        const folders = visible.filter((i) => i.isFolder).length;
+        const files = visible.filter((i) => !i.isFolder);
+        const total = files.reduce((sum, f) => sum + Number(f.size ?? 0), 0);
+        const row = rows[cursor];
+        const sel = row && !row.up ? `${row.item.name}  |  ` : "";
+        summaryEl.textContent = `${sel}${formatSize(total)} in ${files.length} file(s), ${folders} folder(s)`;
+      }
+
+      function setCursor(idx: number) {
+        if (!rows.length) return;
+        cursor = Math.min(Math.max(idx, 0), rows.length - 1);
+        const trs = fileListEl.children;
+        for (let i = 0; i < trs.length; i++) trs[i].classList.toggle("cursor", i === cursor);
+        (trs[cursor] as HTMLElement | undefined)?.scrollIntoView({ block: "nearest" });
+        renderSummary(rows.filter((r): r is { up: false; item: DriveItem } => !r.up).map((r) => r.item));
+      }
+
+      function goUp() {
+        if (folderStack.length > 1) {
+          folderStack.pop();
+          cursor = 0;
+          loadCurrentFolder();
+        }
+      }
+
+      function openRow(idx: number) {
+        const row = rows[idx];
+        if (!row) return;
+        if (row.up) return goUp();
+        if (row.item.isFolder) {
+          folderStack.push({ id: row.item.id, name: row.item.name });
+          cursor = 0;
+          loadCurrentFolder();
+        } else {
+          openFile(row.item);
         }
       }
 
@@ -160,8 +286,6 @@
       }
 
       async function openFile(item: DriveItem) {
-        selectedId = item.id;
-        renderTable();
         viewerHeader.textContent = item.name;
         viewerBody.textContent = "Downloading file...";
         try {
@@ -182,6 +306,49 @@
         }
       }
 
+      async function loadFreeSpace() {
+        try {
+          const { used, limit } = await getStorageInfo();
+          freeSpaceEl.textContent =
+            limit === null
+              ? `Free: unlimited (${formatSize(used)} used)`
+              : `Free: ${formatSize(Math.max(limit - used, 0))} of ${formatSize(limit)}`;
+        } catch {
+          freeSpaceEl.textContent = "Free: n/a";
+        }
+      }
+
+      listScroll.addEventListener("keydown", (e) => {
+        const page = Math.max(Math.floor(listScroll.clientHeight / 22) - 1, 1);
+        const handlers: Record<string, () => void> = {
+          ArrowDown: () => setCursor(cursor + 1),
+          ArrowUp: () => setCursor(cursor - 1),
+          PageDown: () => setCursor(cursor + page),
+          PageUp: () => setCursor(cursor - page),
+          Home: () => setCursor(0),
+          End: () => setCursor(rows.length - 1),
+          Enter: () => openRow(cursor),
+          Backspace: goUp,
+        };
+        const handler = handlers[e.key];
+        if (handler) {
+          e.preventDefault();
+          handler();
+        }
+      });
+
+      document.querySelectorAll<HTMLElement>("th[data-sort]").forEach((th) => {
+        th.onclick = () => {
+          const key = th.dataset.sort as SortKey;
+          if (sortKey === key) sortDir = sortDir === 1 ? -1 : 1;
+          else {
+            sortKey = key;
+            sortDir = 1;
+          }
+          renderTable();
+        };
+      });
+
       loginBtn.onclick = async () => {
         try {
           await signInWithGoogle();
@@ -190,14 +357,22 @@
           filterInput.disabled = false;
           refreshBtn.disabled = false;
           await loadCurrentFolder();
+          listScroll.focus();
+          loadFreeSpace();
         } catch (err: any) {
           statusText.textContent = "Sign-in failed";
           console.error(err);
         }
       };
 
-      filterInput.oninput = renderTable;
-      refreshBtn.onclick = loadCurrentFolder;
+      filterInput.oninput = () => {
+        cursor = 0;
+        renderTable();
+      };
+      refreshBtn.onclick = () => {
+        loadCurrentFolder();
+        loadFreeSpace();
+      };
     </script>
   </body>
 </html>
