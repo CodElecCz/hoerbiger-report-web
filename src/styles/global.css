@@ -61,5 +61,6 @@ tbody tr.selected td:first-child, tbody tr.cursor td:first-child { box-shadow: i
 #viewer-body { flex: 1; overflow: auto; }
 pre { margin: 0; font-family: Consolas, monospace; font-size: 12px; white-space: pre-wrap; }
 iframe { width: 100%; height: 100%; border: none; }
-footer { display: flex; justify-content: space-between; gap: 16px; padding: 4px 16px; background: #0f172a; color: #cbd5e1; font-size: 12px; font-family: Consolas, monospace; }
+footer { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 4px 16px; padding: 4px 16px; background: #0f172a; color: #cbd5e1; font-size: 12px; font-family: Consolas, monospace; }
 #hint { color: #94a3b8; font-size: 11px; font-family: system-ui, sans-serif; }
+#storage-info { margin-left: auto; overflow-wrap: anywhere; }

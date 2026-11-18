@@ -12,6 +12,12 @@ export interface R2Item {
   size?: number;
 }
 
+export interface BucketStats {
+  totalBytes: number;
+  totalFiles: number;
+  limitBytes: number;
+}
+
 interface WorkerFile {
   key: string;
   size: number;
@@ -58,6 +64,17 @@ async function workerGet(query: string): Promise<Response> {
   if (response.status === 401) logout();
   if (!response.ok) throw new Error(`Worker request failed (${response.status})`);
   return response;
+}
+
+export async function getBucketStats(): Promise<BucketStats> {
+  const data: unknown = await (await workerGet("action=stats")).json();
+  if (
+    typeof data !== "object" || data === null ||
+    !("totalBytes" in data) || typeof data.totalBytes !== "number" || !Number.isSafeInteger(data.totalBytes) || data.totalBytes < 0 ||
+    !("totalFiles" in data) || typeof data.totalFiles !== "number" || !Number.isSafeInteger(data.totalFiles) || data.totalFiles < 0 ||
+    !("limitBytes" in data) || typeof data.limitBytes !== "number" || !Number.isSafeInteger(data.limitBytes) || data.limitBytes < 0
+  ) throw new Error("Invalid bucket stats from Worker");
+  return { totalBytes: data.totalBytes, totalFiles: data.totalFiles, limitBytes: data.limitBytes };
 }
 
 async function listObjects(prefix: string, recursive = false): Promise<WorkerListing> {

@@ -12,6 +12,8 @@ The password is stored unencrypted in the browser's localStorage and is accessib
 
 Folders and selections can be downloaded as ZIP files. Downloads are assembled in browser memory, so large selections may exceed available memory.
 
+The footer displays bucket usage and remaining free-tier space from the Worker's authenticated `action=stats` response (`totalBytes`, `totalFiles`, and `limitBytes`). Usage refreshes after login and when the Refresh button is clicked.
+
 ## Commands
 
 | Command | Action |

@@ -74,6 +74,7 @@ import "../styles/global.css";
     <footer>
       <span id="summary">&nbsp;</span>
       <span id="hint">↑↓ move · Enter open · Backspace up · Home/End</span>
+      <span id="storage-info" role="status"></span>
     </footer>
 
     <script>
@@ -81,6 +82,7 @@ import "../styles/global.css";
         loginWithPassword,
         logout,
         getSavedPassword,
+        getBucketStats,
         listFolderContents,
         readFileText,
         downloadFile,
@@ -129,6 +131,7 @@ import "../styles/global.css";
       let currentFile: R2Item | null = null;
       const viewerBody = document.getElementById("viewer-body")!;
       const summaryEl = document.getElementById("summary")!;
+      const storageInfo = document.getElementById("storage-info")!;
 
       let folderStack: { prefix: string; name: string }[] = [{ prefix: "", name: "Reports" }];
       let currentItems: R2Item[] = [];
@@ -141,12 +144,26 @@ import "../styles/global.css";
       let connected = false;
       let requestVersion = 0;
       let previewVersion = 0;
+      let statsVersion = 0;
 
       function formatSize(bytes: number): string {
         if (bytes < 1024) return `${bytes} B`;
         if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
         if (bytes < 1024 ** 3) return `${(bytes / 1024 ** 2).toFixed(1)} MB`;
         return `${(bytes / 1024 ** 3).toFixed(2)} GB`;
+      }
+
+      async function loadBucketStats() {
+        const version = ++statsVersion;
+        storageInfo.textContent = "Loading storage...";
+        try {
+          const { totalBytes, totalFiles, limitBytes } = await getBucketStats();
+          if (version !== statsVersion) return;
+          const freeBytes = Math.max(limitBytes - totalBytes, 0);
+          storageInfo.textContent = `Storage: ${formatSize(totalBytes)} / ${formatSize(limitBytes)} used (${formatSize(freeBytes)} free) • ${totalFiles.toLocaleString()} files`;
+        } catch (err) {
+          if (version === statsVersion) storageInfo.textContent = `Storage unavailable: ${errorMessage(err)}`;
+        }
       }
 
       function compare(a: R2Item, b: R2Item): number {
@@ -476,6 +493,7 @@ import "../styles/global.css";
           filterInput.disabled = false;
           refreshBtn.disabled = false;
           viewerBody.textContent = "Select a file from the list to preview or download.";
+          void loadBucketStats();
           await loadCurrentFolder();
           if (connected) listScroll.focus();
         } catch (err) {
@@ -500,6 +518,8 @@ import "../styles/global.css";
         connected = false;
         requestVersion++;
         previewVersion++;
+        statsVersion++;
+        storageInfo.textContent = "";
         folderStack = [{ prefix: "", name: "Reports" }];
         currentItems = [];
         checked.clear();
@@ -535,6 +555,7 @@ import "../styles/global.css";
       };
       refreshBtn.onclick = () => {
         loadCurrentFolder();
+        void loadBucketStats();
       };
 
       renderBreadcrumbs();
