@@ -82,6 +82,7 @@ tbody tr.selected, tbody tr.cursor { background: #e0f2fe; }
 #viewer-body h3 { margin: 0 0 8px; font-size: 13px; color: #475569; }
 .csv-section { margin-bottom: 20px; }
 .csv-sections { width: max-content; min-width: 100%; }
+.csv-sections:has(.csv-section + .csv-section) .csv-section { width: max-content; }
 .csv-table-scroll { border: 1px solid #e2e8f0; border-radius: 5px; }
 #viewer-body .csv-section table { width: max-content; min-width: 100%; table-layout: auto; }
 #viewer-body .csv-section th, #viewer-body .csv-section td { padding: 6px 10px; text-align: left; }
