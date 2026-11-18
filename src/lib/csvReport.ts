@@ -63,8 +63,17 @@ function readRows(text: string, delimiter: string): string[][] {
   return rows;
 }
 
-function makeSection(name: string, rows: string[][]): CsvSection {
-  const keyValue = /^(header|results)$/i.test(name);
+function isUnitRow(row: string[], allowEmpty = false): boolean {
+  const cells = row.map((value) => value.trim());
+  return cells.every((value) => !value || value === "-" || /^\[.+\]$/.test(value)) &&
+    (cells.some((value) => /^\[.+\]$/.test(value)) || (allowEmpty && cells.every((value) => !value)));
+}
+
+function makeSection(name: string, rows: string[][], forcedTable = false): CsvSection {
+  const hasUnits = rows.length > 1 && isUnitRow(rows[1], forcedTable);
+  const sectionNameIsHeader = rows[0]?.[0]?.trim().toLowerCase() === name.toLowerCase() &&
+    rows[0].filter((value) => value.trim()).length > 2;
+  const keyValue = name !== "Data" && !forcedTable && !hasUnits && !sectionNameIsHeader;
   if (keyValue) {
     const width = rows.reduce((max, row) => Math.max(max, row.length), 2);
     return {
@@ -75,10 +84,10 @@ function makeSection(name: string, rows: string[][]): CsvSection {
     };
   }
   const [header = [], ...data] = rows;
-  const hasUnits = data.length > 0 && data[0].some((value) => /^\[.+\]$/.test(value.trim())) &&
-    data[0].every((value) => !value.trim() || /^\[.+\]$/.test(value.trim()));
   const units = hasUnits ? data.shift()! : [];
-  const width = data.reduce((max, row) => Math.max(max, row.length), Math.max(header.length, units.length));
+  let width = data.reduce((max, row) => Math.max(max, row.length), Math.max(header.length, units.length));
+  while (width > 0 && !header[width - 1]?.trim() && !units[width - 1]?.trim() &&
+         data.every((row) => !row[width - 1]?.trim())) width--;
   const columns = Array.from({ length: width }, (_, index) => header[index] || `Column ${index + 1}`);
   return { name, keyValue, columns, units, rows: data };
 }
@@ -89,17 +98,30 @@ export function parseCsvReport(text: string): CsvSection[] {
   const sections: CsvSection[] = [];
   let name = "Data";
   let sectionRows: string[][] = [];
-  let sawSection = false;
+  let table = false;
+  let sectionHasBlock = false;
+  const structured = rows[0]?.length === 1 && /^\[(Header|Results|Measurement)\]$/i.test(rows[0][0].trim());
+  const flush = () => {
+    if (!sectionRows.length) return;
+    const section = makeSection(name, sectionRows, table);
+    if (table && sectionHasBlock) section.name = `${name} — Table`;
+    sections.push(section);
+    sectionRows = [];
+    sectionHasBlock = true;
+  };
   for (const row of rows) {
-    const marker = row.length === 1 ? /^\[(Header|Results|Measurement)\]$/i.exec(row[0].trim()) : null;
+    const marker = structured && row.length === 1 ? /^\[([^\[\]]+)\]$/.exec(row[0].trim()) : null;
     if (marker) {
-      if (sectionRows.length) sections.push(makeSection(name, sectionRows));
+      flush();
       name = marker[1];
-      sectionRows = [];
-      sawSection = true;
+      table = false;
+      sectionHasBlock = false;
+    } else if (structured && row.length === 1 && row[0].trim() === "$Table") {
+      flush();
+      table = true;
     } else sectionRows.push(row);
   }
-  if (sectionRows.length || sawSection) sections.push(makeSection(name, sectionRows));
+  flush();
   if (!sections.length) throw new Error("CSV file is empty");
   return sections;
 }
