@@ -84,15 +84,13 @@ import "../styles/global.css";
 
       <div id="viewer-pane">
         <div id="viewer-header">
-          <span id="viewer-title">No file selected</span>
-          <div class="viewer-actions">
-            <div id="viewer-switcher" role="group" aria-label="CSV view" hidden>
-              <button id="viewer-report" type="button" aria-pressed="false">Report</button>
-              <button id="viewer-table" type="button" aria-pressed="false">Table</button>
-              <button id="viewer-text" type="button" aria-pressed="false">Text</button>
-            </div>
-            <button id="viewer-download" hidden>Download</button>
+          <div id="viewer-switcher" role="group" aria-label="CSV view" hidden>
+            <button id="viewer-report" type="button" aria-pressed="false">Report</button>
+            <button id="viewer-table" type="button" aria-pressed="false">Table</button>
+            <button id="viewer-text" type="button" aria-pressed="false">Text</button>
           </div>
+          <span id="viewer-title">No file selected</span>
+          <button id="viewer-download" hidden>Download</button>
         </div>
         <div id="viewer-body">Log in to browse reports.</div>
       </div>

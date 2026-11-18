@@ -67,22 +67,22 @@ tbody tr.selected, tbody tr.cursor { background: #e0f2fe; }
 .dl-btn:disabled:hover { background: #e2e8f0; color: #94a3b8; }
 .dl-btn svg { width: 16px; height: 16px; }
 #viewer-pane { flex: 1; display: flex; flex-direction: column; overflow: hidden; padding: 10px 16px; }
-#viewer-header { display: flex; align-items: center; justify-content: space-between; gap: 12px; font-weight: 600; margin-bottom: 8px; padding-bottom: 6px; border-bottom: 1px solid #e2e8f0; }
-#viewer-title { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.viewer-actions { display: flex; align-items: center; gap: 8px; flex: none; }
-#viewer-switcher { display: flex; overflow: hidden; border: 1px solid #cbd5e1; border-radius: 5px; }
+#viewer-header { display: flex; align-items: center; gap: 12px; font-weight: 600; margin-bottom: 8px; padding-bottom: 6px; border-bottom: 1px solid #e2e8f0; }
+#viewer-title { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#viewer-switcher { display: flex; flex: none; overflow: hidden; border: 1px solid #cbd5e1; border-radius: 5px; }
 #viewer-switcher[hidden], #viewer-report[hidden] { display: none; }
 #viewer-switcher button { padding: 4px 8px; border: 0; border-right: 1px solid #cbd5e1; background: #fff; color: #475569; font-size: 12px; cursor: pointer; }
 #viewer-switcher button:last-child { border-right: 0; }
 #viewer-switcher button[aria-pressed="true"] { background: #2563eb; color: #fff; }
 #viewer-switcher button:focus-visible { outline: 2px solid #1d4ed8; outline-offset: -2px; }
-#viewer-download { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border: none; border-radius: 4px; background: #2563eb; color: #fff; cursor: pointer; font-size: 13px; font-weight: 500; }
+#viewer-download { display: inline-flex; flex: none; align-items: center; gap: 6px; padding: 4px 10px; border: none; border-radius: 4px; background: #2563eb; color: #fff; cursor: pointer; font-size: 13px; font-weight: 500; }
 #viewer-download[hidden] { display: none; }
 #viewer-body { flex: 1; overflow: auto; }
 #viewer-body h2 { margin: 0 0 10px; font-size: 16px; }
 #viewer-body h3 { margin: 0 0 8px; font-size: 13px; color: #475569; }
 .csv-section { margin-bottom: 20px; }
-.csv-table-scroll { max-height: 55vh; overflow: auto; border: 1px solid #e2e8f0; border-radius: 5px; }
+.csv-sections { width: max-content; min-width: 100%; }
+.csv-table-scroll { border: 1px solid #e2e8f0; border-radius: 5px; }
 #viewer-body .csv-section table { width: max-content; min-width: 100%; table-layout: auto; }
 #viewer-body .csv-section th, #viewer-body .csv-section td { padding: 6px 10px; text-align: left; }
 #viewer-body .csv-section th { cursor: default; }
