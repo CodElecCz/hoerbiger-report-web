@@ -22,7 +22,7 @@ header button:disabled, #refresh-btn:disabled, #download-selected-btn:disabled {
   header input { flex: 1; width: auto; }
 }
 #download-selected-btn[hidden] { display: none; }
-th.chk, td.chk { padding-left: 14px; padding-right: 0; }
+th.chk, td.chk, th.action, td.action { padding-left: 0; padding-right: 0; text-align: center; }
 th.chk input, td.chk input { cursor: pointer; margin: 0; }
 #toolbar { display: flex; gap: 10px; align-items: center; padding: 6px 16px; background: #f1f5f9; border-bottom: 1px solid #cbd5e1; }
 #breadcrumbs { display: flex; gap: 4px; align-items: center; flex: 1; font-size: 13px; flex-wrap: wrap; font-family: Consolas, monospace; }
@@ -41,14 +41,14 @@ th:hover { background: #e2e8f0; }
 th.num, td.num { text-align: right; }
 th.nosort { cursor: default; }
 th.nosort:hover { background: #f8fafc; }
-td.name { display: flex; align-items: center; gap: 10px; }
-td.name .label { overflow: hidden; text-overflow: ellipsis; }
+td.name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+td.name .name-content { display: flex; align-items: center; gap: 10px; min-width: 0; }
+td.name .label { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 td.dir .label { font-weight: 700; color: #0f172a; }
 td svg { flex: none; width: 20px; height: 20px; }
 tbody tr { cursor: pointer; user-select: none; transition: background 0.12s; }
 tbody tr:hover { background: #f1f5f9; }
 tbody tr.selected, tbody tr.cursor { background: #e0f2fe; }
-tbody tr.selected td:first-child, tbody tr.cursor td:first-child { box-shadow: inset 3px 0 0 #2563eb; }
 .dl-btn { display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; border: none; border-radius: 6px; background: transparent; color: #475569; cursor: pointer; }
 .dl-btn:hover { background: #bfdbfe; color: #1d4ed8; }
 .dl-btn:disabled { background: #e2e8f0; color: #94a3b8; }

@@ -40,12 +40,12 @@ import "../styles/global.css";
         <div id="list-scroll" tabindex="0">
           <table>
             <colgroup>
-              <col style="width: 40px;" />
+              <col style="width: 36px;" />
               <col />
               <col style="width: 90px;" />
-              <col style="width: 110px;" />
+              <col style="width: 105px;" />
               <col style="width: 80px;" />
-              <col style="width: 56px;" />
+              <col style="width: 44px;" />
             </colgroup>
             <thead>
               <tr>
@@ -54,7 +54,7 @@ import "../styles/global.css";
                 <th data-sort="size" class="num">Size</th>
                 <th data-sort="date">Date</th>
                 <th data-sort="time">Time</th>
-                <th class="nosort"></th>
+                <th class="nosort action"></th>
               </tr>
             </thead>
             <tbody id="file-list"></tbody>
@@ -238,15 +238,18 @@ import "../styles/global.css";
 
           const nameTd = document.createElement("td");
           nameTd.className = row.up || row.item.isFolder ? "name dir" : "name";
+          const nameContent = document.createElement("span");
+          nameContent.className = "name-content";
           const label = document.createElement("span");
           label.className = "label";
           label.textContent = row.up ? ".." : row.item.name;
           nameTd.title = label.textContent;
-          nameTd.insertAdjacentHTML("afterbegin", row.up ? ICON_UP : iconFor(row.item));
-          nameTd.appendChild(label);
+          nameContent.insertAdjacentHTML("afterbegin", row.up ? ICON_UP : iconFor(row.item));
+          nameContent.appendChild(label);
+          nameTd.appendChild(nameContent);
 
           const actionTd = document.createElement("td");
-          actionTd.className = "num";
+          actionTd.className = "action";
           const chkTd = document.createElement("td");
           chkTd.className = "chk";
           chkTd.onclick = (e) => e.stopPropagation();
