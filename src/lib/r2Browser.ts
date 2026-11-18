@@ -104,6 +104,30 @@ export async function listFolderContents(prefix: string): Promise<R2Item[]> {
   ];
 }
 
+export async function listFolderContentsRecursive(prefix: string): Promise<R2Item[]> {
+  const { files, folders } = await listObjects(prefix, true);
+  const folderKeys = new Set(folders.filter((key) => key !== prefix));
+  for (const file of files) {
+    let slash = file.key.indexOf("/", prefix.length);
+    while (slash !== -1) {
+      folderKeys.add(file.key.slice(0, slash + 1));
+      slash = file.key.indexOf("/", slash + 1);
+    }
+  }
+  return [
+    ...Array.from(folderKeys, (key) => ({
+      key, name: key.slice(prefix.length).replace(/\/$/, ""), isFolder: true,
+    })),
+    ...files.filter((file) => file.key !== prefix && !file.key.endsWith("/")).map((file) => ({
+      key: file.key,
+      name: file.key.slice(prefix.length),
+      isFolder: false,
+      modifiedTime: new Date(file.uploaded),
+      size: file.size,
+    })),
+  ];
+}
+
 async function fetchFileBytes(key: string): Promise<Uint8Array> {
   const response = await workerGet(`action=get&key=${encodeURIComponent(key)}`);
   return new Uint8Array(await response.arrayBuffer());
@@ -138,7 +162,7 @@ function safeZipPath(path: string): string {
   return path;
 }
 
-async function zipItems(items: R2Item[], zipName: string, onProgress?: (msg: string) => void): Promise<void> {
+async function zipItems(items: R2Item[], zipName: string, onProgress?: (msg: string) => void, expandFolders = true): Promise<void> {
   onProgress?.("Scanning folders...");
   const zip = new JSZip();
   const files: { key: string; path: string }[] = [];
@@ -146,6 +170,7 @@ async function zipItems(items: R2Item[], zipName: string, onProgress?: (msg: str
     if (item.isFolder) {
       const base = safeZipPath(`${item.name}/`);
       zip.folder(base);
+      if (!expandFolders) continue;
       const { files: objects } = await listObjects(item.key, true);
       for (const obj of objects) {
         if (obj.key === item.key) continue;
@@ -175,8 +200,8 @@ export async function downloadFolderAsZip(
 }
 
 export async function downloadItemsAsZip(
-  items: R2Item[], zipName: string, onProgress?: (msg: string) => void,
+  items: R2Item[], zipName: string, onProgress?: (msg: string) => void, expandFolders = true,
 ): Promise<void> {
-  await zipItems(items, zipName, onProgress);
+  await zipItems(items, zipName, onProgress, expandFolders);
 }
 

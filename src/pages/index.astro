@@ -30,10 +30,30 @@ import "../styles/global.css";
 
     <div id="toolbar">
       <div id="breadcrumbs"></div>
-      <input id="filter-input" type="text" placeholder="Filter current folder..." disabled />
       <button id="download-selected-btn" hidden>Download Selected (.zip)</button>
       <button id="refresh-btn" disabled>Refresh</button>
     </div>
+
+    <fieldset id="filter-bar" disabled aria-label="Report filters">
+      <input type="search" id="filter-input" placeholder="Filter name or part number..." aria-label="Filter name or part number" />
+      <div class="filter-group" role="group" aria-label="File type">
+        <span class="filter-label">Type</span>
+        <button type="button" class="filter-pill" data-filter-type="all" aria-pressed="true">All</button>
+        <button type="button" class="filter-pill" data-filter-type="folders" aria-pressed="false">Folders</button>
+        <button type="button" class="filter-pill" data-filter-type=".csv" aria-pressed="false">.csv</button>
+        <button type="button" class="filter-pill" data-filter-type=".txt" aria-pressed="false">.txt</button>
+        <button type="button" class="filter-pill" data-filter-type=".html" aria-pressed="false">.html</button>
+      </div>
+      <div class="filter-group" role="group" aria-label="Result status">
+        <span class="filter-label">Result</span>
+        <button type="button" class="filter-pill" data-filter-result="all" aria-pressed="true">All</button>
+        <button type="button" class="filter-pill" data-filter-result="ok" aria-pressed="false">OK</button>
+        <button type="button" class="filter-pill" data-filter-result="nok" aria-pressed="false">NOK</button>
+      </div>
+      <label class="filter-date-label">Date <input type="date" id="filter-date" /></label>
+      <label class="filter-recursive-label"><input type="checkbox" id="filter-recursive" /> Search subfolders</label>
+      <button type="button" id="filter-reset" disabled>Reset</button>
+    </fieldset>
 
     <main>
       <div id="browser-pane">
@@ -84,6 +104,7 @@ import "../styles/global.css";
         getSavedPassword,
         getBucketStats,
         listFolderContents,
+        listFolderContentsRecursive,
         readFileText,
         downloadFile,
         downloadFolderAsZip,
@@ -120,7 +141,13 @@ import "../styles/global.css";
       const logoutBtn = document.getElementById("logout-btn") as HTMLButtonElement;
       const statusText = document.getElementById("status-text")!;
       const breadcrumbsEl = document.getElementById("breadcrumbs")!;
+      const filterBar = document.getElementById("filter-bar") as HTMLFieldSetElement;
       const filterInput = document.getElementById("filter-input") as HTMLInputElement;
+      const filterDate = document.getElementById("filter-date") as HTMLInputElement;
+      const filterRecursive = document.getElementById("filter-recursive") as HTMLInputElement;
+      const filterReset = document.getElementById("filter-reset") as HTMLButtonElement;
+      const typeButtons = document.querySelectorAll<HTMLButtonElement>("[data-filter-type]");
+      const resultButtons = document.querySelectorAll<HTMLButtonElement>("[data-filter-result]");
       const refreshBtn = document.getElementById("refresh-btn") as HTMLButtonElement;
       const downloadSelectedBtn = document.getElementById("download-selected-btn") as HTMLButtonElement;
       const selectAll = document.getElementById("select-all") as HTMLInputElement;
@@ -145,12 +172,54 @@ import "../styles/global.css";
       let requestVersion = 0;
       let previewVersion = 0;
       let statsVersion = 0;
+      let typeFilter = "all";
+      let resultFilter = "all";
+      let listingRecursive = false;
 
       function formatSize(bytes: number): string {
         if (bytes < 1024) return `${bytes} B`;
         if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
         if (bytes < 1024 ** 3) return `${(bytes / 1024 ** 2).toFixed(1)} MB`;
         return `${(bytes / 1024 ** 3).toFixed(2)} GB`;
+      }
+
+      function hasCriteria(): boolean {
+        return !!filterInput.value.trim() || typeFilter !== "all" || resultFilter !== "all" || !!filterDate.value;
+      }
+
+      function matchesFilters(item: R2Item): boolean {
+        const needle = filterInput.value.trim().toLowerCase();
+        if (needle && !item.name.toLowerCase().includes(needle)) return false;
+        if (typeFilter === "folders" && !item.isFolder) return false;
+        if (typeFilter !== "all" && typeFilter !== "folders" &&
+            (item.isFolder || !item.name.toLowerCase().endsWith(typeFilter))) return false;
+        const fileName = item.name.split("/").pop() ?? item.name;
+        const upper = fileName.toUpperCase();
+        const isNok = ["_NOK", "_NG", "FAIL", "ERROR"].some((part) => upper.includes(part));
+        if (resultFilter === "nok" && !isNok) return false;
+        if (resultFilter === "ok" && (isNok || !upper.includes("OK"))) return false;
+        if (filterDate.value) {
+          const d = item.modifiedTime;
+          const modifiedDate = d ? `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}` : "";
+          if (!fileName.includes(filterDate.value) && modifiedDate !== filterDate.value) return false;
+        }
+        return true;
+      }
+
+      function updateFilterControls() {
+        typeButtons.forEach((button) => button.setAttribute("aria-pressed", String(button.dataset.filterType === typeFilter)));
+        resultButtons.forEach((button) => button.setAttribute("aria-pressed", String(button.dataset.filterResult === resultFilter)));
+        filterReset.disabled = !hasCriteria() && !filterRecursive.checked;
+      }
+
+      function filtersChanged() {
+        cursor = 0;
+        updateFilterControls();
+        if (connected && (filterRecursive.checked && hasCriteria()) !== listingRecursive) {
+          void loadCurrentFolder();
+        } else {
+          renderTable();
+        }
       }
 
       async function loadBucketStats() {
@@ -217,11 +286,9 @@ import "../styles/global.css";
       }
 
       function renderTable() {
-        const needle = filterInput.value.trim().toLowerCase();
-        const visible = (needle
-          ? currentItems.filter((i) => i.name.toLowerCase().includes(needle))
-          : [...currentItems]
-        ).sort(compare);
+        const visible = currentItems.filter(matchesFilters).sort(compare);
+        const visibleKeys = new Set(visible.map((item) => item.key));
+        for (const key of checked) if (!visibleKeys.has(key)) checked.delete(key);
 
         rows = [];
         if (folderStack.length > 1) rows.push({ up: true });
@@ -279,7 +346,7 @@ import "../styles/global.css";
               btn.disabled = true;
               try {
                 if (item.isFolder) {
-                  await downloadFolderAsZip(item.key, item.name, (msg) => (statusText.textContent = msg));
+                  await downloadFolderAsZip(item.key, item.name.split("/").pop() ?? item.name, (msg) => (statusText.textContent = msg));
                 } else {
                   await downloadItem(item);
                 }
@@ -321,7 +388,7 @@ import "../styles/global.css";
         const n = visibleIds.filter((id) => checked.has(id)).length;
         selectAll.checked = visibleIds.length > 0 && n === visibleIds.length;
         selectAll.indeterminate = n > 0 && n < visibleIds.length;
-        const total = checked.size;
+        const total = n;
         downloadSelectedBtn.hidden = total === 0;
         if (!downloadSelectedBtn.disabled) downloadSelectedBtn.textContent = `Download Selected (.zip) · ${total}`;
       }
@@ -337,11 +404,20 @@ import "../styles/global.css";
       };
 
       downloadSelectedBtn.onclick = async () => {
-        const items = currentItems.filter((i) => checked.has(i.key));
+        const visible = rows.filter((row): row is { up: false; item: R2Item } => !row.up).map((row) => row.item);
+        const items = visible.filter((item) => checked.has(item.key));
         if (!items.length) return;
         downloadSelectedBtn.disabled = true;
         try {
-          await downloadItemsAsZip(items, "Reports-selection", (msg) => (statusText.textContent = msg));
+          if (hasCriteria()) {
+            const selectedFolders = items.filter((item) => item.isFolder);
+            const included = new Set(items.map((item) => item.key));
+            const matchingFiles = visible.filter((item) => !item.isFolder && !included.has(item.key) &&
+              selectedFolders.some((folder) => item.key.startsWith(folder.key)));
+            await downloadItemsAsZip([...items, ...matchingFiles], "Reports-selection", (msg) => (statusText.textContent = msg), false);
+          } else {
+            await downloadItemsAsZip(items, "Reports-selection", (msg) => (statusText.textContent = msg));
+          }
         } catch (err) {
           statusText.textContent = `Download failed: ${errorMessage(err)}`;
         } finally {
@@ -356,7 +432,9 @@ import "../styles/global.css";
         const total = files.reduce((sum, f) => sum + Number(f.size ?? 0), 0);
         const row = rows[cursor];
         const sel = row && !row.up ? `${row.item.name}  |  ` : "";
-        summaryEl.textContent = `${sel}${formatSize(total)} in ${files.length} file(s), ${folders} folder(s)`;
+        summaryEl.textContent = hasCriteria()
+          ? `Showing ${visible.length} of ${currentItems.length} items • ${formatSize(total)}`
+          : `${sel}${formatSize(total)} in ${files.length} file(s), ${folders} folder(s)`;
       }
 
       function setCursor(idx: number) {
@@ -393,13 +471,15 @@ import "../styles/global.css";
         if (!connected) return;
         const version = ++requestVersion;
         const current = folderStack[folderStack.length - 1];
+        listingRecursive = filterRecursive.checked && hasCriteria();
+        const recursive = listingRecursive;
         renderBreadcrumbs();
         checked.clear();
         currentItems = [];
         renderTable();
         statusText.textContent = `Loading ${current.name}...`;
         try {
-          const items = await listFolderContents(current.prefix);
+          const items = await (recursive ? listFolderContentsRecursive(current.prefix) : listFolderContents(current.prefix));
           if (version !== requestVersion) return;
           currentItems = items;
           renderTable();
@@ -414,7 +494,7 @@ import "../styles/global.css";
 
       async function downloadItem(item: R2Item) {
         statusText.textContent = `Downloading ${item.name}...`;
-        await downloadFile(item.key, item.name);
+        await downloadFile(item.key, item.name.split("/").pop() ?? item.name);
         statusText.textContent = `Downloaded ${item.name}`;
       }
 
@@ -493,7 +573,7 @@ import "../styles/global.css";
           connectForm.hidden = true;
           logoutBtn.hidden = false;
           passwordInput.value = "";
-          filterInput.disabled = false;
+          filterBar.disabled = false;
           refreshBtn.disabled = false;
           viewerBody.textContent = "Select a file from the list to preview or download.";
           void loadBucketStats();
@@ -530,7 +610,13 @@ import "../styles/global.css";
         currentFile = null;
         cursor = 0;
         filterInput.value = "";
-        filterInput.disabled = true;
+        filterDate.value = "";
+        filterRecursive.checked = false;
+        typeFilter = "all";
+        resultFilter = "all";
+        listingRecursive = false;
+        updateFilterControls();
+        filterBar.disabled = true;
         refreshBtn.disabled = true;
         viewerDownloadBtn.hidden = true;
         viewerTitle.textContent = "No file selected";
@@ -552,9 +638,28 @@ import "../styles/global.css";
         }
       };
 
-      filterInput.oninput = () => {
-        cursor = 0;
-        renderTable();
+      filterInput.oninput = filtersChanged;
+      filterDate.onchange = filtersChanged;
+      filterRecursive.onchange = filtersChanged;
+      typeButtons.forEach((button) => {
+        button.onclick = () => {
+          typeFilter = button.dataset.filterType ?? "all";
+          filtersChanged();
+        };
+      });
+      resultButtons.forEach((button) => {
+        button.onclick = () => {
+          resultFilter = button.dataset.filterResult ?? "all";
+          filtersChanged();
+        };
+      });
+      filterReset.onclick = () => {
+        filterInput.value = "";
+        filterDate.value = "";
+        filterRecursive.checked = false;
+        typeFilter = "all";
+        resultFilter = "all";
+        filtersChanged();
       };
       refreshBtn.onclick = () => {
         loadCurrentFolder();

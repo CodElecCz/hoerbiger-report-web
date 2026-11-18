@@ -30,7 +30,19 @@ th.chk input, td.chk input { cursor: pointer; margin: 0; }
 .crumb { color: #2563eb; cursor: pointer; background: none; border: none; padding: 0; font-size: 13px; font-family: Consolas, monospace; }
 .crumb:hover { text-decoration: underline; }
 .crumb:last-child { color: #0f172a; font-weight: 600; cursor: default; text-decoration: none; }
-#filter-input { padding: 4px 10px; border: 1px solid #94a3b8; border-radius: 4px; width: 220px; }
+#filter-bar { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 16px; margin: 0; padding: 8px 16px; border: 0; border-bottom: 1px solid #cbd5e1; background: #f8fafc; }
+#filter-input, #filter-date { padding: 5px 9px; border: 1px solid #94a3b8; border-radius: 4px; background: #fff; color: #1e293b; font-size: 13px; }
+#filter-input { width: 240px; max-width: 100%; }
+.filter-group { display: flex; align-items: center; gap: 4px; }
+.filter-label, .filter-date-label, .filter-recursive-label { font-size: 12px; color: #475569; }
+.filter-label { margin-right: 2px; font-weight: 600; }
+.filter-date-label, .filter-recursive-label { display: flex; align-items: center; gap: 6px; }
+.filter-pill, #filter-reset { padding: 4px 8px; border: 1px solid #cbd5e1; border-radius: 5px; background: #fff; color: #475569; font-size: 12px; cursor: pointer; }
+.filter-pill[aria-pressed="true"] { border-color: #2563eb; background: #2563eb; color: #fff; }
+.filter-pill:focus-visible, #filter-reset:focus-visible, #filter-input:focus-visible, #filter-date:focus-visible, #filter-recursive:focus-visible { outline: 2px solid #2563eb; outline-offset: 2px; }
+#filter-bar:disabled { opacity: 0.6; }
+#filter-bar:disabled button, #filter-reset:disabled { cursor: default; }
+#filter-reset:disabled { opacity: 0.5; }
 main { display: flex; flex: 1; overflow: hidden; }
 #browser-pane { width: 48%; min-width: 420px; display: flex; flex-direction: column; border-right: 1px solid #cbd5e1; }
 #list-scroll { flex: 1; overflow: auto; outline: none; }

@@ -12,6 +12,8 @@ The password is stored unencrypted in the browser's localStorage and is accessib
 
 Folders and selections can be downloaded as ZIP files. Downloads are assembled in browser memory, so large selections may exceed available memory.
 
+Filter reports by name, type, result, or date, and optionally search subfolders. NOK markers take precedence over OK. With filters active, selected folders contribute only matching files visible in the current results; enable subfolder search to include matching descendants.
+
 The footer displays bucket usage and remaining free-tier space from the Worker's authenticated `action=stats` response (`totalBytes`, `totalFiles`, and `limitBytes`). Usage refreshes after login and when the Refresh button is clicked.
 
 ## Commands
