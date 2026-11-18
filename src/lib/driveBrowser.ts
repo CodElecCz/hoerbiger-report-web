@@ -1,6 +1,6 @@
 const CLIENT_ID = "415993271124-66el8s33kk8duorerfufuf5n4kk7mvn5.apps.googleusercontent.com";
 export const ROOT_FOLDER_ID = "1nbAPh_jvKFAItbTfVWMXoSfaHDHOqsnn";
-const SCOPES = "https://googleapis.com";
+const SCOPES = "https://www.googleapis.com/auth/drive.readonly";
 
 let accessToken: string | null = null;
 export interface DriveItem {
@@ -18,7 +18,7 @@ function ensureGoogleScript(): Promise<void> {
       resolve();
       return;
     }
-    const scriptUrl = "https://google.com";
+    const scriptUrl = "https://accounts.google.com/gsi/client";
     const existing = document.querySelector(`script[src="${scriptUrl}"]`);
     if (existing) {
       existing.addEventListener("load", () => resolve());
@@ -73,7 +73,7 @@ export async function listFolderContents(folderId: string): Promise<DriveItem[]>
   const q = encodeURIComponent(`'${folderId}' in parents and trashed = false`);
   const fields = encodeURIComponent("files(id,name,mimeType,modifiedTime,size)");
   const orderBy = encodeURIComponent("folder,name desc");
-  const url = `https://googleapis.com{q}&fields=${fields}&orderBy=${orderBy}&pageSize=500`;
+  const url = `https://www.googleapis.com/drive/v3/files?q=${q}&fields=${fields}&orderBy=${orderBy}&pageSize=500`;
 
   const res = await driveGet(url);
   const data = await res.json();
@@ -89,6 +89,6 @@ export async function listFolderContents(folderId: string): Promise<DriveItem[]>
 }
 
 export async function readFileText(fileId: string): Promise<string> {
-  const res = await driveGet(`https://googleapis.com{fileId}?alt=media`);
+  const res = await driveGet(`https://www.googleapis.com/drive/v3/files/${encodeURIComponent(fileId)}?alt=media`);
   return await res.text();
 }
