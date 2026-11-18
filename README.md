@@ -1,43 +1,22 @@
-# Astro Starter Kit: Minimal
+# Hoerbiger Reports Browser
 
-```sh
-npm create astro@latest -- --template minimal
-```
+A browser for reports stored in the `hoerbiger-reports` Cloudflare R2 bucket.
 
-> 🧑‍🚀 **Seasoned astronaut?** Delete this file. Have fun!
+## Setup
 
-## 🚀 Project Structure
+1. Install dependencies with `npm install`.
+2. Configure the Worker at `https://hoerbiger-reports-api.codelec.workers.dev` to allow the site's origin, the `GET` method, and the `Authorization` header via CORS. Include the development server's origin when developing locally.
+3. Open the site and enter the Worker password. A saved password logs in automatically; use **Logout** to remove it.
 
-Inside of your Astro project, you'll see the following folders and files:
+The password is stored unencrypted in the browser's localStorage and is accessible to scripts running on the site's origin. Use a trusted device and HTTPS; do not share the browser profile. Clearing site data also removes the password. Old browser-stored R2 keys are removed when the page loads, but their R2 token must be revoked separately if it is no longer needed.
 
-```text
-/
-├── public/
-├── src/
-│   └── pages/
-│       └── index.astro
-└── package.json
-```
+Folders and selections can be downloaded as ZIP files. Downloads are assembled in browser memory, so large selections may exceed available memory.
 
-Astro looks for `.astro` or `.md` files in the `src/pages/` directory. Each page is exposed as a route based on its file name.
+## Commands
 
-There's nothing special about `src/components/`, but that's where we like to put any Astro/React/Vue/Svelte/Preact components.
-
-Any static assets, like images, can be placed in the `public/` directory.
-
-## 🧞 Commands
-
-All commands are run from the root of the project, from a terminal:
-
-| Command                   | Action                                           |
-| :------------------------ | :----------------------------------------------- |
-| `npm install`             | Installs dependencies                            |
-| `npm run dev`             | Starts local dev server at `localhost:4321`      |
-| `npm run build`           | Build your production site to `./dist/`          |
-| `npm run preview`         | Preview your build locally, before deploying     |
-| `npm run astro ...`       | Run CLI commands like `astro add`, `astro check` |
-| `npm run astro -- --help` | Get help using the Astro CLI                     |
-
-## 👀 Want to learn more?
-
-Feel free to check [our documentation](https://docs.astro.build) or jump into our [Discord server](https://astro.build/chat).
+| Command | Action |
+| --- | --- |
+| `npm run dev` | Start the development server |
+| `npm run build` | Build the production site |
+| `npm test` | Run Worker client tests |
+| `npm run preview` | Preview the production build |

@@ -1,6 +1,11 @@
 * { box-sizing: border-box; font-family: system-ui, -apple-system, sans-serif; }
 body { margin: 0; display: flex; flex-direction: column; height: 100vh; color: #1e293b; }
-header { display: flex; gap: 12px; align-items: center; padding: 8px 16px; background: #0f172a; color: #fff; }
+header { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; padding: 8px 16px; background: #0f172a; color: #fff; }
+header form { display: flex; gap: 8px; align-items: end; flex-wrap: wrap; }
+header form[hidden] { display: none; }
+header label { display: flex; flex-direction: column; gap: 2px; font-size: 11px; color: #cbd5e1; }
+header input { width: 180px; padding: 5px 8px; border: 1px solid #94a3b8; border-radius: 4px; }
+#status-text { font-size: 13px; color: #cbd5e1; overflow-wrap: anywhere; }
 header button, #refresh-btn, #download-selected-btn { padding: 5px 12px; border-radius: 4px; border: none; background: #2563eb; color: #fff; cursor: pointer; font-weight: 500; }
 header button:disabled, #refresh-btn:disabled, #download-selected-btn:disabled { background: #475569; cursor: default; }
 #download-selected-btn[hidden] { display: none; }

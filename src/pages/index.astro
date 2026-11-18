@@ -10,8 +10,12 @@ import "../styles/global.css";
   <body>
     <header>
       <strong>Hoerbiger Reports</strong>
-      <button id="login-btn">Sign in with Google</button>
-      <span id="status-text" style="font-size: 13px; color: #94a3b8;">Not connected</span>
+      <form id="connect-form">
+        <label>Password <input id="password" type="password" placeholder="Password..." autocomplete="current-password" required /></label>
+        <button id="login-btn" type="submit">Login</button>
+      </form>
+      <button id="logout-btn" type="button" hidden>Logout</button>
+      <span id="status-text" role="status">Not connected</span>
     </header>
 
     <div id="toolbar">
@@ -53,28 +57,27 @@ import "../styles/global.css";
           <span id="viewer-title">No file selected</span>
           <button id="viewer-download" hidden>Download</button>
         </div>
-        <div id="viewer-body">Sign in with Google to browse your shared Reports folder.</div>
+        <div id="viewer-body">Log in to browse reports.</div>
       </div>
     </main>
 
     <footer>
       <span id="summary">&nbsp;</span>
       <span id="hint">↑↓ move · Enter open · Backspace up · Home/End</span>
-      <span id="free-space">Free: -</span>
     </footer>
 
     <script>
       import {
-        ROOT_FOLDER_ID,
-        signInWithGoogle,
+        loginWithPassword,
+        logout,
+        getSavedPassword,
         listFolderContents,
         readFileText,
-        getStorageInfo,
         downloadFile,
         downloadFolderAsZip,
         downloadItemsAsZip,
-        type DriveItem,
-      } from "../lib/driveBrowser";
+        type R2Item,
+      } from "../lib/r2Browser";
 
       type SortKey = "name" | "size" | "date" | "time";
 
@@ -92,14 +95,17 @@ import "../styles/global.css";
         html: fileIcon("#2563eb", `<path d="M10 12l-2 2.5 2 2.5M14 12l2 2.5-2 2.5" stroke="#2563eb" stroke-width="1.5"/>`),
         generic: fileIcon("#94a3b8", ""),
       };
-      const iconFor = (item: DriveItem) => {
+      const iconFor = (item: R2Item) => {
         if (item.isFolder) return ICON_FOLDER;
         const ext = item.name.split(".").pop()?.toLowerCase() ?? "";
         return FILE_ICONS[ext === "htm" ? "html" : ext] ?? FILE_ICONS.generic;
       };
-      type Row = { up: true } | { up: false; item: DriveItem };
+      type Row = { up: true } | { up: false; item: R2Item };
 
+      const connectForm = document.getElementById("connect-form") as HTMLFormElement;
+      const passwordInput = document.getElementById("password") as HTMLInputElement;
       const loginBtn = document.getElementById("login-btn") as HTMLButtonElement;
+      const logoutBtn = document.getElementById("logout-btn") as HTMLButtonElement;
       const statusText = document.getElementById("status-text")!;
       const breadcrumbsEl = document.getElementById("breadcrumbs")!;
       const filterInput = document.getElementById("filter-input") as HTMLInputElement;
@@ -110,19 +116,21 @@ import "../styles/global.css";
       const fileListEl = document.getElementById("file-list")!;
       const viewerTitle = document.getElementById("viewer-title")!;
       const viewerDownloadBtn = document.getElementById("viewer-download") as HTMLButtonElement;
-      let currentFile: DriveItem | null = null;
+      let currentFile: R2Item | null = null;
       const viewerBody = document.getElementById("viewer-body")!;
       const summaryEl = document.getElementById("summary")!;
-      const freeSpaceEl = document.getElementById("free-space")!;
 
-      let folderStack: { id: string; name: string }[] = [{ id: ROOT_FOLDER_ID, name: "Reports" }];
-      let currentItems: DriveItem[] = [];
+      let folderStack: { prefix: string; name: string }[] = [{ prefix: "", name: "Reports" }];
+      let currentItems: R2Item[] = [];
       let rows: Row[] = [];
       let cursor = 0;
       let sortKey: SortKey = "name";
       let sortDir: 1 | -1 = -1;
       let selectedId: string | null = null;
       const checked = new Set<string>();
+      let connected = false;
+      let requestVersion = 0;
+      let previewVersion = 0;
 
       function formatSize(bytes: number): string {
         if (bytes < 1024) return `${bytes} B`;
@@ -131,7 +139,7 @@ import "../styles/global.css";
         return `${(bytes / 1024 ** 3).toFixed(2)} GB`;
       }
 
-      function compare(a: DriveItem, b: DriveItem): number {
+      function compare(a: R2Item, b: R2Item): number {
         if (a.isFolder !== b.isFolder) return a.isFolder ? -1 : 1;
         let r = 0;
         switch (sortKey) {
@@ -140,8 +148,8 @@ import "../styles/global.css";
             break;
           case "date":
           case "time": {
-            const ta = new Date(a.modifiedTime).getTime();
-            const tb = new Date(b.modifiedTime).getTime();
+            const ta = a.modifiedTime?.getTime() ?? 0;
+            const tb = b.modifiedTime?.getTime() ?? 0;
             r = sortKey === "date" ? ta - tb : (ta % 86400000) - (tb % 86400000);
             break;
           }
@@ -198,7 +206,7 @@ import "../styles/global.css";
           const tr = document.createElement("tr");
           const classes: string[] = [];
           if (idx === cursor) classes.push("cursor");
-          if (!row.up && row.item.id === selectedId) classes.push("selected");
+          if (!row.up && row.item.key === selectedId) classes.push("selected");
           tr.className = classes.join(" ");
 
           const nameTd = document.createElement("td");
@@ -219,14 +227,14 @@ import "../styles/global.css";
             tr.append(chkTd, nameTd, cell("", "num"), cell(""), cell(""), actionTd);
           } else {
             const { item } = row;
-            const d = new Date(item.modifiedTime);
+            const d = item.modifiedTime;
             const chk = document.createElement("input");
             chk.type = "checkbox";
-            chk.checked = checked.has(item.id);
+            chk.checked = checked.has(item.key);
             chk.setAttribute("aria-label", `Select ${item.name}`);
             chk.onchange = () => {
-              if (chk.checked) checked.add(item.id);
-              else checked.delete(item.id);
+              if (chk.checked) checked.add(item.key);
+              else checked.delete(item.key);
               updateSelectionUI();
             };
             chkTd.appendChild(chk);
@@ -241,13 +249,12 @@ import "../styles/global.css";
               btn.disabled = true;
               try {
                 if (item.isFolder) {
-                  await downloadFolderAsZip(item.id, item.name, (msg) => (statusText.textContent = msg));
+                  await downloadFolderAsZip(item.key, item.name, (msg) => (statusText.textContent = msg));
                 } else {
                   await downloadItem(item);
                 }
-              } catch (err: any) {
-                statusText.textContent = "Download failed";
-                console.error(err);
+              } catch (err) {
+                statusText.textContent = `Download failed: ${errorMessage(err)}`;
               } finally {
                 btn.disabled = false;
               }
@@ -257,8 +264,8 @@ import "../styles/global.css";
               chkTd,
               nameTd,
               cell(item.isFolder ? "" : formatSize(Number(item.size ?? 0)), "num"),
-              cell(d.toLocaleDateString(undefined, { year: "numeric", month: "2-digit", day: "2-digit" })),
-              cell(d.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" })),
+              cell(d ? d.toLocaleDateString(undefined, { year: "numeric", month: "2-digit", day: "2-digit" }) : ""),
+              cell(d ? d.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" }) : ""),
               actionTd,
             );
           }
@@ -280,7 +287,7 @@ import "../styles/global.css";
       }
 
       function updateSelectionUI() {
-        const visibleIds = rows.filter((r): r is { up: false; item: DriveItem } => !r.up).map((r) => r.item.id);
+        const visibleIds = rows.filter((r): r is { up: false; item: R2Item } => !r.up).map((r) => r.item.key);
         const n = visibleIds.filter((id) => checked.has(id)).length;
         selectAll.checked = visibleIds.length > 0 && n === visibleIds.length;
         selectAll.indeterminate = n > 0 && n < visibleIds.length;
@@ -293,32 +300,27 @@ import "../styles/global.css";
       selectAll.onchange = () => {
         for (const row of rows) {
           if (row.up) continue;
-          if (selectAll.checked) checked.add(row.item.id);
-          else checked.delete(row.item.id);
+          if (selectAll.checked) checked.add(row.item.key);
+          else checked.delete(row.item.key);
         }
         renderTable();
       };
 
       downloadSelectedBtn.onclick = async () => {
-        const items = currentItems.filter((i) => checked.has(i.id));
+        const items = currentItems.filter((i) => checked.has(i.key));
         if (!items.length) return;
         downloadSelectedBtn.disabled = true;
         try {
-          if (items.length === 1 && !items[0].isFolder) {
-            await downloadItem(items[0]);
-          } else {
-            await downloadItemsAsZip(items, "Reports-selection", (msg) => (statusText.textContent = msg));
-          }
-        } catch (err: any) {
-          statusText.textContent = "Download failed";
-          console.error(err);
+          await downloadItemsAsZip(items, "Reports-selection", (msg) => (statusText.textContent = msg));
+        } catch (err) {
+          statusText.textContent = `Download failed: ${errorMessage(err)}`;
         } finally {
           downloadSelectedBtn.disabled = false;
           updateSelectionUI();
         }
       };
 
-      function renderSummary(visible: DriveItem[]) {
+      function renderSummary(visible: R2Item[]) {
         const folders = visible.filter((i) => i.isFolder).length;
         const files = visible.filter((i) => !i.isFolder);
         const total = files.reduce((sum, f) => sum + Number(f.size ?? 0), 0);
@@ -333,7 +335,7 @@ import "../styles/global.css";
         const trs = fileListEl.children;
         for (let i = 0; i < trs.length; i++) trs[i].classList.toggle("cursor", i === cursor);
         (trs[cursor] as HTMLElement | undefined)?.scrollIntoView({ block: "nearest" });
-        renderSummary(rows.filter((r): r is { up: false; item: DriveItem } => !r.up).map((r) => r.item));
+        renderSummary(rows.filter((r): r is { up: false; item: R2Item } => !r.up).map((r) => r.item));
       }
 
       function goUp() {
@@ -349,7 +351,7 @@ import "../styles/global.css";
         if (!row) return;
         if (row.up) return goUp();
         if (row.item.isFolder) {
-          folderStack.push({ id: row.item.id, name: row.item.name });
+          folderStack.push({ prefix: row.item.key, name: row.item.name });
           cursor = 0;
           loadCurrentFolder();
         } else {
@@ -358,45 +360,51 @@ import "../styles/global.css";
       }
 
       async function loadCurrentFolder() {
+        if (!connected) return;
+        const version = ++requestVersion;
         const current = folderStack[folderStack.length - 1];
         renderBreadcrumbs();
         checked.clear();
+        currentItems = [];
+        renderTable();
         statusText.textContent = `Loading ${current.name}...`;
         try {
-          currentItems = await listFolderContents(current.id);
+          const items = await listFolderContents(current.prefix);
+          if (version !== requestVersion) return;
+          currentItems = items;
           renderTable();
           statusText.textContent = `${currentItems.length} item(s)`;
-        } catch (err: any) {
-          statusText.textContent = "Error loading folder";
-          viewerBody.textContent = err.message;
+        } catch (err) {
+          if (version !== requestVersion) return;
+          currentItems = [];
+          renderTable();
+          statusText.textContent = `Error loading folder: ${errorMessage(err)}`;
         }
       }
 
-      async function downloadItem(item: DriveItem) {
+      async function downloadItem(item: R2Item) {
         statusText.textContent = `Downloading ${item.name}...`;
-        try {
-          await downloadFile(item.id, item.name);
-          statusText.textContent = `Downloaded ${item.name}`;
-        } catch (err: any) {
-          statusText.textContent = "Download failed";
-          console.error(err);
-        }
+        await downloadFile(item.key, item.name);
+        statusText.textContent = `Downloaded ${item.name}`;
       }
 
-      async function openFile(item: DriveItem) {
-        selectedId = item.id;
+      async function openFile(item: R2Item) {
+        const version = ++previewVersion;
+        selectedId = item.key;
         for (const [i, tr] of Array.from(fileListEl.children).entries()) {
           const r = rows[i];
-          tr.classList.toggle("selected", !!r && !r.up && r.item.id === item.id);
+          tr.classList.toggle("selected", !!r && !r.up && r.item.key === item.key);
         }
         currentFile = item;
         viewerTitle.textContent = item.name;
         viewerDownloadBtn.hidden = false;
         viewerBody.textContent = "Downloading file...";
         try {
-          const content = await readFileText(item.id);
+          const content = await readFileText(item.key);
+          if (version !== previewVersion) return;
           if (item.name.toLowerCase().endsWith(".html")) {
             const iframe = document.createElement("iframe");
+            iframe.setAttribute("sandbox", "allow-scripts");
             iframe.srcdoc = content;
             viewerBody.innerHTML = "";
             viewerBody.appendChild(iframe);
@@ -406,21 +414,13 @@ import "../styles/global.css";
             viewerBody.innerHTML = "";
             viewerBody.appendChild(pre);
           }
-        } catch (err: any) {
-          viewerBody.textContent = `Failed to load file: ${err.message}`;
+        } catch (err) {
+          if (version === previewVersion) viewerBody.textContent = `Failed to load file: ${errorMessage(err)}`;
         }
       }
 
-      async function loadFreeSpace() {
-        try {
-          const { used, limit } = await getStorageInfo();
-          freeSpaceEl.textContent =
-            limit === null
-              ? `Free: unlimited (${formatSize(used)} used)`
-              : `Free: ${formatSize(Math.max(limit - used, 0))} of ${formatSize(limit)}`;
-        } catch {
-          freeSpaceEl.textContent = "Free: n/a";
-        }
+      function errorMessage(err: unknown): string {
+        return err instanceof Error ? err.message : String(err);
       }
 
       listScroll.addEventListener("keydown", (e) => {
@@ -454,25 +454,69 @@ import "../styles/global.css";
         };
       });
 
-      loginBtn.onclick = async () => {
+      async function connect(password: string) {
+        loginBtn.disabled = true;
+        statusText.textContent = "Logging in...";
         try {
-          await signInWithGoogle();
-          loginBtn.textContent = "Connected";
-          loginBtn.disabled = true;
+          await loginWithPassword(password);
+          connected = true;
+          connectForm.hidden = true;
+          logoutBtn.hidden = false;
+          passwordInput.value = "";
           filterInput.disabled = false;
           refreshBtn.disabled = false;
           viewerBody.textContent = "Select a file from the list to preview or download.";
           await loadCurrentFolder();
-          listScroll.focus();
-          loadFreeSpace();
-        } catch (err: any) {
-          statusText.textContent = "Sign-in failed";
-          console.error(err);
+          if (connected) listScroll.focus();
+        } catch (err) {
+          statusText.textContent = `Login failed: ${errorMessage(err)}`;
+        } finally {
+          loginBtn.disabled = false;
         }
+      }
+
+      connectForm.onsubmit = (event) => {
+        event.preventDefault();
+        void connect(passwordInput.value);
       };
 
-      viewerDownloadBtn.onclick = () => {
-        if (currentFile) downloadItem(currentFile);
+      logoutBtn.onclick = () => {
+        try {
+          logout();
+        } catch (err) {
+          statusText.textContent = `Could not clear password: ${errorMessage(err)}`;
+          return;
+        }
+        connected = false;
+        requestVersion++;
+        previewVersion++;
+        folderStack = [{ prefix: "", name: "Reports" }];
+        currentItems = [];
+        checked.clear();
+        selectedId = null;
+        currentFile = null;
+        cursor = 0;
+        filterInput.value = "";
+        filterInput.disabled = true;
+        refreshBtn.disabled = true;
+        viewerDownloadBtn.hidden = true;
+        viewerTitle.textContent = "No file selected";
+        viewerBody.textContent = "Log in to browse reports.";
+        connectForm.hidden = false;
+        logoutBtn.hidden = true;
+        passwordInput.value = "";
+        renderBreadcrumbs();
+        renderTable();
+        statusText.textContent = "Not connected";
+      };
+
+      viewerDownloadBtn.onclick = async () => {
+        if (!currentFile) return;
+        try {
+          await downloadItem(currentFile);
+        } catch (err) {
+          statusText.textContent = `Download failed: ${errorMessage(err)}`;
+        }
       };
 
       filterInput.oninput = () => {
@@ -481,8 +525,15 @@ import "../styles/global.css";
       };
       refreshBtn.onclick = () => {
         loadCurrentFolder();
-        loadFreeSpace();
       };
+
+      renderBreadcrumbs();
+      try {
+        const saved = getSavedPassword();
+        if (saved !== null) void connect(saved);
+      } catch (err) {
+        statusText.textContent = `Could not read saved password: ${errorMessage(err)}`;
+      }
     </script>
   </body>
 </html>
