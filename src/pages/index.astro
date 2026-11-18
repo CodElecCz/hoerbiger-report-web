@@ -17,6 +17,7 @@ import "../styles/global.css";
     <div id="toolbar">
       <div id="breadcrumbs"></div>
       <input id="filter-input" type="text" placeholder="Filter current folder..." disabled />
+      <button id="download-selected-btn" hidden>Download Selected (.zip)</button>
       <button id="refresh-btn" disabled>Refresh</button>
     </div>
 
@@ -25,6 +26,7 @@ import "../styles/global.css";
         <div id="list-scroll" tabindex="0">
           <table>
             <colgroup>
+              <col style="width: 40px;" />
               <col />
               <col style="width: 90px;" />
               <col style="width: 110px;" />
@@ -33,6 +35,7 @@ import "../styles/global.css";
             </colgroup>
             <thead>
               <tr>
+                <th class="nosort chk"><input type="checkbox" id="select-all" title="Select all" /></th>
                 <th data-sort="name">Name</th>
                 <th data-sort="size" class="num">Size</th>
                 <th data-sort="date">Date</th>
@@ -68,6 +71,8 @@ import "../styles/global.css";
         readFileText,
         getStorageInfo,
         downloadFile,
+        downloadFolderAsZip,
+        downloadItemsAsZip,
         type DriveItem,
       } from "../lib/driveBrowser";
 
@@ -99,6 +104,8 @@ import "../styles/global.css";
       const breadcrumbsEl = document.getElementById("breadcrumbs")!;
       const filterInput = document.getElementById("filter-input") as HTMLInputElement;
       const refreshBtn = document.getElementById("refresh-btn") as HTMLButtonElement;
+      const downloadSelectedBtn = document.getElementById("download-selected-btn") as HTMLButtonElement;
+      const selectAll = document.getElementById("select-all") as HTMLInputElement;
       const listScroll = document.getElementById("list-scroll")!;
       const fileListEl = document.getElementById("file-list")!;
       const viewerTitle = document.getElementById("viewer-title")!;
@@ -115,6 +122,7 @@ import "../styles/global.css";
       let sortKey: SortKey = "name";
       let sortDir: 1 | -1 = -1;
       let selectedId: string | null = null;
+      const checked = new Set<string>();
 
       function formatSize(bytes: number): string {
         if (bytes < 1024) return `${bytes} B`;
@@ -204,24 +212,49 @@ import "../styles/global.css";
 
           const actionTd = document.createElement("td");
           actionTd.className = "num";
+          const chkTd = document.createElement("td");
+          chkTd.className = "chk";
+          chkTd.onclick = (e) => e.stopPropagation();
           if (row.up) {
-            tr.append(nameTd, cell("", "num"), cell(""), cell(""), actionTd);
+            tr.append(chkTd, nameTd, cell("", "num"), cell(""), cell(""), actionTd);
           } else {
             const { item } = row;
             const d = new Date(item.modifiedTime);
-            if (!item.isFolder) {
-              const btn = document.createElement("button");
-              btn.className = "dl-btn";
-              btn.title = `Download ${item.name}`;
-              btn.setAttribute("aria-label", `Download ${item.name}`);
-              btn.innerHTML = ICON_DOWNLOAD;
-              btn.onclick = (e) => {
-                e.stopPropagation();
-                downloadItem(item);
-              };
-              actionTd.appendChild(btn);
-            }
+            const chk = document.createElement("input");
+            chk.type = "checkbox";
+            chk.checked = checked.has(item.id);
+            chk.setAttribute("aria-label", `Select ${item.name}`);
+            chk.onchange = () => {
+              if (chk.checked) checked.add(item.id);
+              else checked.delete(item.id);
+              updateSelectionUI();
+            };
+            chkTd.appendChild(chk);
+
+            const btn = document.createElement("button");
+            btn.className = "dl-btn";
+            btn.title = item.isFolder ? `Download ${item.name} as .zip` : `Download ${item.name}`;
+            btn.setAttribute("aria-label", btn.title);
+            btn.innerHTML = ICON_DOWNLOAD;
+            btn.onclick = async (e) => {
+              e.stopPropagation();
+              btn.disabled = true;
+              try {
+                if (item.isFolder) {
+                  await downloadFolderAsZip(item.id, item.name, (msg) => (statusText.textContent = msg));
+                } else {
+                  await downloadItem(item);
+                }
+              } catch (err: any) {
+                statusText.textContent = "Download failed";
+                console.error(err);
+              } finally {
+                btn.disabled = false;
+              }
+            };
+            actionTd.appendChild(btn);
             tr.append(
+              chkTd,
               nameTd,
               cell(item.isFolder ? "" : formatSize(Number(item.size ?? 0)), "num"),
               cell(d.toLocaleDateString(undefined, { year: "numeric", month: "2-digit", day: "2-digit" })),
@@ -243,7 +276,47 @@ import "../styles/global.css";
         });
 
         renderSummary(visible);
+        updateSelectionUI();
       }
+
+      function updateSelectionUI() {
+        const visibleIds = rows.filter((r): r is { up: false; item: DriveItem } => !r.up).map((r) => r.item.id);
+        const n = visibleIds.filter((id) => checked.has(id)).length;
+        selectAll.checked = visibleIds.length > 0 && n === visibleIds.length;
+        selectAll.indeterminate = n > 0 && n < visibleIds.length;
+        const total = checked.size;
+        downloadSelectedBtn.hidden = total === 0;
+        if (!downloadSelectedBtn.disabled) downloadSelectedBtn.textContent = `Download Selected (.zip) · ${total}`;
+      }
+
+      selectAll.onclick = (e) => e.stopPropagation();
+      selectAll.onchange = () => {
+        for (const row of rows) {
+          if (row.up) continue;
+          if (selectAll.checked) checked.add(row.item.id);
+          else checked.delete(row.item.id);
+        }
+        renderTable();
+      };
+
+      downloadSelectedBtn.onclick = async () => {
+        const items = currentItems.filter((i) => checked.has(i.id));
+        if (!items.length) return;
+        downloadSelectedBtn.disabled = true;
+        try {
+          if (items.length === 1 && !items[0].isFolder) {
+            await downloadItem(items[0]);
+          } else {
+            await downloadItemsAsZip(items, "Reports-selection", (msg) => (statusText.textContent = msg));
+          }
+        } catch (err: any) {
+          statusText.textContent = "Download failed";
+          console.error(err);
+        } finally {
+          downloadSelectedBtn.disabled = false;
+          updateSelectionUI();
+        }
+      };
 
       function renderSummary(visible: DriveItem[]) {
         const folders = visible.filter((i) => i.isFolder).length;
@@ -287,6 +360,7 @@ import "../styles/global.css";
       async function loadCurrentFolder() {
         const current = folderStack[folderStack.length - 1];
         renderBreadcrumbs();
+        checked.clear();
         statusText.textContent = `Loading ${current.name}...`;
         try {
           currentItems = await listFolderContents(current.id);
