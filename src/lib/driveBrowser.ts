@@ -102,6 +102,18 @@ export async function getStorageInfo(): Promise<StorageInfo> {
   };
 }
 
+export async function downloadFile(fileId: string, fileName: string): Promise<void> {
+  const res = await driveGet(`https://www.googleapis.com/drive/v3/files/${encodeURIComponent(fileId)}?alt=media`);
+  const url = URL.createObjectURL(await res.blob());
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = fileName;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 10000);
+}
+
 export async function readFileText(fileId: string): Promise<string> {
   const res = await driveGet(`https://www.googleapis.com/drive/v3/files/${encodeURIComponent(fileId)}?alt=media`);
   return await res.text();
