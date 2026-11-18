@@ -1,16 +1,204 @@
 ---
 ---
-
 <html lang="en">
-	<head>
-		<meta charset="utf-8" />
-		<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-		<link rel="icon" href="/favicon.ico" />
-		<meta name="viewport" content="width=device-width" />
-		<meta name="generator" content={Astro.generator} />
-		<title>Astro</title>
-	</head>
-	<body>
-		<h1>Astro</h1>
-	</body>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Hoerbiger Reports Browser</title>
+    <script src="https://google.com" async defer></script>
+    <style>
+      * { box-sizing: border-box; font-family: system-ui, -apple-system, sans-serif; }
+      body { margin: 0; display: flex; flex-direction: column; height: 100vh; color: #1e293b; }
+      header { display: flex; gap: 12px; align-items: center; padding: 10px 16px; background: #0f172a; color: #fff; }
+      header button { padding: 6px 12px; border-radius: 4px; border: none; background: #2563eb; color: #fff; cursor: pointer; font-weight: 500; }
+      header button:disabled { background: #475569; cursor: default; }
+      #toolbar { display: flex; gap: 10px; align-items: center; padding: 8px 16px; background: #f1f5f9; border-bottom: 1px solid #cbd5e1; }
+      #breadcrumbs { display: flex; gap: 6px; align-items: center; flex: 1; font-size: 14px; flex-wrap: wrap; }
+      .crumb { color: #2563eb; cursor: pointer; text-decoration: underline; background: none; border: none; padding: 0; font-size: 14px; }
+      .crumb:last-child { color: #0f172a; text-decoration: none; font-weight: 600; cursor: default; }
+      #filter-input { padding: 5px 10px; border: 1px solid #94a3b8; border-radius: 4px; width: 240px; }
+      main { display: flex; flex: 1; overflow: hidden; }
+      #browser-pane { width: 42%; overflow: auto; border-right: 1px solid #cbd5e1; }
+      table { width: 100%; border-collapse: collapse; font-size: 13px; }
+      th, td { padding: 7px 10px; border-bottom: 1px solid #e2e8f0; text-align: left; }
+      th { background: #f8fafc; position: sticky; top: 0; z-index: 1; }
+      tr:hover { background: #e0f2fe; cursor: pointer; }
+      tr.selected { background: #bae6fd; }
+      #viewer-pane { flex: 1; display: flex; flex-direction: column; overflow: hidden; padding: 12px 16px; }
+      #viewer-header { font-weight: 600; margin-bottom: 8px; padding-bottom: 6px; border-bottom: 1px solid #e2e8f0; }
+      #viewer-body { flex: 1; overflow: auto; }
+      pre { margin: 0; font-family: Consolas, monospace; font-size: 12px; white-space: pre-wrap; }
+      iframe { width: 100%; height: 100%; border: none; }
+    </style>
+  </head>
+  <body>
+    <header>
+      <strong>Hoerbiger Reports</strong>
+      <button id="login-btn">Sign in with Google</button>
+      <span id="status-text" style="font-size: 13px; color: #94a3b8;">Not connected</span>
+    </header>
+
+    <div id="toolbar">
+      <div id="breadcrumbs"></div>
+      <input id="filter-input" type="text" placeholder="Filter current folder..." disabled />
+      <button id="refresh-btn" disabled>Refresh</button>
+    </div>
+
+    <main>
+      <div id="browser-pane">
+        <table>
+          <thead>
+            <tr>
+              <th>Name</th>
+              <th style="width: 150px;">Modified</th>
+              <th style="width: 80px;">Size</th>
+            </tr>
+          </thead>
+          <tbody id="file-list"></tbody>
+        </table>
+      </div>
+
+      <div id="viewer-pane">
+        <div id="viewer-header">No file selected</div>
+        <div id="viewer-body">Sign in with Google to browse your shared Reports folder.</div>
+      </div>
+    </main>
+
+    <script>
+      import {
+        ROOT_FOLDER_ID,
+        signInWithGoogle,
+        listFolderContents,
+        readFileText,
+        type DriveItem,
+      } from "../lib/driveBrowser";
+
+      const loginBtn = document.getElementById("login-btn") as HTMLButtonElement;
+      const statusText = document.getElementById("status-text")!;
+      const breadcrumbsEl = document.getElementById("breadcrumbs")!;
+      const filterInput = document.getElementById("filter-input") as HTMLInputElement;
+      const refreshBtn = document.getElementById("refresh-btn") as HTMLButtonElement;
+      const fileListEl = document.getElementById("file-list")!;
+      const viewerHeader = document.getElementById("viewer-header")!;
+      const viewerBody = document.getElementById("viewer-body")!;
+
+      let folderStack: { id: string; name: string }[] = [{ id: ROOT_FOLDER_ID, name: "Reports" }];
+      let currentItems: DriveItem[] = [];
+      let selectedId: string | null = null;
+
+      function formatSize(bytes?: string): string {
+        if (!bytes) return "-";
+        const n = Number(bytes);
+        if (n < 1024) return `${n} B`;
+        if (n < 1024 * 1024) return `${(n / 1024).toFixed(1)} KB`;
+        return `${(n / (1024 * 1024)).toFixed(1)} MB`;
+      }
+
+      function renderBreadcrumbs() {
+        breadcrumbsEl.innerHTML = "";
+        folderStack.forEach((crumb, idx) => {
+          if (idx > 0) {
+            const sep = document.createElement("span");
+            sep.textContent = "/";
+            breadcrumbsEl.appendChild(sep);
+          }
+          const btn = document.createElement("button");
+          btn.className = "crumb";
+          btn.textContent = crumb.name;
+          if (idx < folderStack.length - 1) {
+            btn.onclick = () => {
+              folderStack = folderStack.slice(0, idx + 1);
+              loadCurrentFolder();
+            };
+          }
+          breadcrumbsEl.appendChild(btn);
+        });
+      }
+
+      function renderTable() {
+        const needle = filterInput.value.trim().toLowerCase();
+        const filtered = needle
+          ? currentItems.filter((item) => item.name.toLowerCase().includes(needle))
+          : currentItems;
+
+        fileListEl.innerHTML = "";
+        for (const item of filtered) {
+          const tr = document.createElement("tr");
+          if (item.id === selectedId) tr.className = "selected";
+
+          const icon = item.isFolder ? "📁" : "📄";
+          const dateStr = new Date(item.modifiedTime).toLocaleString();
+          tr.innerHTML = `
+            <td>${icon} ${item.name}</td>
+            <td>${dateStr}</td>
+            <td>${item.isFolder ? "-" : formatSize(item.size)}</td>
+          `;
+
+          tr.onclick = () => {
+            if (item.isFolder) {
+              folderStack.push({ id: item.id, name: item.name });
+              loadCurrentFolder();
+            } else {
+              openFile(item);
+            }
+          };
+          fileListEl.appendChild(tr);
+        }
+      }
+
+      async function loadCurrentFolder() {
+        const current = folderStack[folderStack.length - 1];
+        renderBreadcrumbs();
+        statusText.textContent = `Loading ${current.name}...`;
+        try {
+          currentItems = await listFolderContents(current.id);
+          renderTable();
+          statusText.textContent = `${currentItems.length} item(s)`;
+        } catch (err: any) {
+          statusText.textContent = "Error loading folder";
+          viewerBody.textContent = err.message;
+        }
+      }
+
+      async function openFile(item: DriveItem) {
+        selectedId = item.id;
+        renderTable();
+        viewerHeader.textContent = item.name;
+        viewerBody.textContent = "Downloading file...";
+        try {
+          const content = await readFileText(item.id);
+          if (item.name.toLowerCase().endsWith(".html")) {
+            const iframe = document.createElement("iframe");
+            iframe.srcdoc = content;
+            viewerBody.innerHTML = "";
+            viewerBody.appendChild(iframe);
+          } else {
+            const pre = document.createElement("pre");
+            pre.textContent = content;
+            viewerBody.innerHTML = "";
+            viewerBody.appendChild(pre);
+          }
+        } catch (err: any) {
+          viewerBody.textContent = `Failed to load file: ${err.message}`;
+        }
+      }
+
+      loginBtn.onclick = async () => {
+        try {
+          await signInWithGoogle();
+          loginBtn.textContent = "Connected";
+          loginBtn.disabled = true;
+          filterInput.disabled = false;
+          refreshBtn.disabled = false;
+          await loadCurrentFolder();
+        } catch (err: any) {
+          statusText.textContent = "Sign-in failed";
+          console.error(err);
+        }
+      };
+
+      filterInput.oninput = renderTable;
+      refreshBtn.onclick = loadCurrentFolder;
+    </script>
+  </body>
 </html>
