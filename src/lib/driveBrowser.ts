@@ -13,9 +13,38 @@ export interface DriveItem {
   isFolder: boolean;
 }
 
-export function signInWithGoogle(): Promise<string> {
+function ensureGoogleScript(): Promise<void> {
   return new Promise((resolve, reject) => {
-    const client = (window as any).google.accounts.oauth2.initTokenClient({
+    if ((window as any).google?.accounts?.oauth2) {
+      resolve();
+      return;
+    }
+    const existing = document.querySelector('script[src="https://google.com"]');
+    if (existing) {
+      existing.addEventListener("load", () => resolve());
+      existing.addEventListener("error", () => reject(new Error("Failed to load Google GIS script")));
+      return;
+    }
+    const script = document.createElement("script");
+    script.src = "https://google.com";
+    script.async = true;
+    script.defer = true;
+    script.onload = () => resolve();
+    script.onerror = () => reject(new Error("Network blocked loading ://google.com"));
+    document.head.appendChild(script);
+  });
+}
+
+export async function signInWithGoogle(): Promise<string> {
+  await ensureGoogleScript();
+
+  return new Promise((resolve, reject) => {
+    const googleObj = (window as any).google;
+    if (!googleObj?.accounts?.oauth2) {
+      reject(new Error("window.google.accounts.oauth2 is still undefined after script load"));
+      return;
+    }
+    const client = googleObj.accounts.oauth2.initTokenClient({
       client_id: CLIENT_ID,
       scope: SCOPES,
       callback: (res: any) => {
@@ -40,7 +69,6 @@ async function driveGet(url: string): Promise<Response> {
   return res;
 }
 
-/** List all folders and files directly inside a given folder ID */
 export async function listFolderContents(folderId: string): Promise<DriveItem[]> {
   const q = encodeURIComponent(`'${folderId}' in parents and trashed = false`);
   const fields = encodeURIComponent("files(id,name,mimeType,modifiedTime,size)");
@@ -60,7 +88,6 @@ export async function listFolderContents(folderId: string): Promise<DriveItem[]>
   }));
 }
 
-/** Download text content of a selected file */
 export async function readFileText(fileId: string): Promise<string> {
   const res = await driveGet(`https://googleapis.com{fileId}?alt=media`);
   return await res.text();
