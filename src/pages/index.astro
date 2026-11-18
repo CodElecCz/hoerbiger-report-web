@@ -85,7 +85,14 @@ import "../styles/global.css";
       <div id="viewer-pane">
         <div id="viewer-header">
           <span id="viewer-title">No file selected</span>
-          <button id="viewer-download" hidden>Download</button>
+          <div class="viewer-actions">
+            <div id="viewer-switcher" role="group" aria-label="CSV view" hidden>
+              <button id="viewer-report" type="button" aria-pressed="false">Report</button>
+              <button id="viewer-table" type="button" aria-pressed="false">Table</button>
+              <button id="viewer-text" type="button" aria-pressed="false">Text</button>
+            </div>
+            <button id="viewer-download" hidden>Download</button>
+          </div>
         </div>
         <div id="viewer-body">Log in to browse reports.</div>
       </div>
@@ -111,8 +118,12 @@ import "../styles/global.css";
         downloadItemsAsZip,
         type R2Item,
       } from "../lib/r2Browser";
+      import { AdjReportViewer } from "../lib/adjReportViewer";
+      import { parseCsvReport, type CsvSection } from "../lib/csvReport";
+      import { createCsvTable } from "../lib/csvTable";
 
       type SortKey = "name" | "size" | "date" | "time";
+      type CsvView = "report" | "table" | "text";
 
       const SVG_OPEN = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">';
       const ICON_FOLDER = `${SVG_OPEN}<path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7z" fill="#fbbf24" stroke="#d97706" stroke-width="1.2"/></svg>`;
@@ -155,8 +166,17 @@ import "../styles/global.css";
       const fileListEl = document.getElementById("file-list")!;
       const viewerTitle = document.getElementById("viewer-title")!;
       const viewerDownloadBtn = document.getElementById("viewer-download") as HTMLButtonElement;
+      const viewerSwitcher = document.getElementById("viewer-switcher")!;
+      const viewerReportBtn = document.getElementById("viewer-report") as HTMLButtonElement;
+      const viewerTableBtn = document.getElementById("viewer-table") as HTMLButtonElement;
+      const viewerTextBtn = document.getElementById("viewer-text") as HTMLButtonElement;
       let currentFile: R2Item | null = null;
       const viewerBody = document.getElementById("viewer-body")!;
+      let csvText: string | null = null;
+      let csvSections: CsvSection[] | null = null;
+      let csvTable: HTMLElement | null = null;
+      let reportViewer: AdjReportViewer | null = null;
+      let activeCsvView: CsvView | null = null;
       const summaryEl = document.getElementById("summary")!;
       const storageInfo = document.getElementById("storage-info")!;
 
@@ -498,8 +518,54 @@ import "../styles/global.css";
         statusText.textContent = `Downloaded ${item.name}`;
       }
 
+      function clearCsvView() {
+        reportViewer?.destroy();
+        reportViewer = null;
+        csvText = null;
+        csvSections = null;
+        csvTable = null;
+        activeCsvView = null;
+        viewerSwitcher.hidden = true;
+      }
+
+      function showCsvView(view: CsvView) {
+        if (csvText === null || view === activeCsvView) return;
+        reportViewer?.destroy();
+        reportViewer = null;
+        activeCsvView = view;
+        viewerReportBtn.setAttribute("aria-pressed", String(view === "report"));
+        viewerTableBtn.setAttribute("aria-pressed", String(view === "table"));
+        viewerTextBtn.setAttribute("aria-pressed", String(view === "text"));
+        viewerBody.replaceChildren();
+        try {
+          if (view === "text") {
+            const pre = document.createElement("pre");
+            pre.textContent = csvText;
+            viewerBody.appendChild(pre);
+          } else {
+            csvSections ??= parseCsvReport(csvText);
+            if (view === "table") {
+              csvTable ??= createCsvTable(csvSections);
+              viewerBody.appendChild(csvTable);
+            } else {
+              reportViewer = new AdjReportViewer(csvSections);
+              reportViewer.render(viewerBody);
+            }
+          }
+        } catch (err) {
+          reportViewer?.destroy();
+          reportViewer = null;
+          viewerBody.textContent = `Failed to render CSV: ${errorMessage(err)}`;
+        }
+      }
+
+      viewerReportBtn.onclick = () => showCsvView("report");
+      viewerTableBtn.onclick = () => showCsvView("table");
+      viewerTextBtn.onclick = () => showCsvView("text");
+
       async function openFile(item: R2Item) {
         const version = ++previewVersion;
+        clearCsvView();
         selectedId = item.key;
         for (const [i, tr] of Array.from(fileListEl.children).entries()) {
           const r = rows[i];
@@ -512,7 +578,14 @@ import "../styles/global.css";
         try {
           const content = await readFileText(item.key);
           if (version !== previewVersion) return;
-          if (item.name.toLowerCase().endsWith(".html")) {
+          const fileName = item.name.split("/").pop() ?? item.name;
+          if (fileName.toLowerCase().endsWith(".csv")) {
+            const isAdjReport = /^ADJ_.*\.csv$/i.test(fileName);
+            csvText = content;
+            viewerReportBtn.hidden = !isAdjReport;
+            viewerSwitcher.hidden = false;
+            showCsvView(isAdjReport ? "report" : "table");
+          } else if (fileName.toLowerCase().endsWith(".html")) {
             const iframe = document.createElement("iframe");
             iframe.setAttribute("sandbox", "allow-scripts");
             iframe.srcdoc = content;
@@ -601,6 +674,7 @@ import "../styles/global.css";
         connected = false;
         requestVersion++;
         previewVersion++;
+        clearCsvView();
         statsVersion++;
         storageInfo.textContent = "";
         folderStack = [{ prefix: "", name: "Reports" }];
