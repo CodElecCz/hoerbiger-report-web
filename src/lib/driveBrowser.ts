@@ -3,7 +3,6 @@ export const ROOT_FOLDER_ID = "1nbAPh_jvKFAItbTfVWMXoSfaHDHOqsnn";
 const SCOPES = "https://googleapis.com";
 
 let accessToken: string | null = null;
-
 export interface DriveItem {
   id: string;
   name: string;
@@ -19,18 +18,19 @@ function ensureGoogleScript(): Promise<void> {
       resolve();
       return;
     }
-    const existing = document.querySelector('script[src="https://google.com"]');
+    const scriptUrl = "https://google.com";
+    const existing = document.querySelector(`script[src="${scriptUrl}"]`);
     if (existing) {
       existing.addEventListener("load", () => resolve());
       existing.addEventListener("error", () => reject(new Error("Failed to load Google GIS script")));
       return;
     }
     const script = document.createElement("script");
-    script.src = "https://google.com";
+    script.src = scriptUrl;
     script.async = true;
     script.defer = true;
     script.onload = () => resolve();
-    script.onerror = () => reject(new Error("Network blocked loading ://google.com"));
+    script.onerror = () => reject(new Error(`Network blocked loading ${scriptUrl}`));
     document.head.appendChild(script);
   });
 }
