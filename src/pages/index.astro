@@ -57,6 +57,13 @@ import "../styles/global.css";
 
     <main>
       <div id="browser-pane">
+        <div class="browser-controls">
+          <button type="button" id="compact-browser-btn" aria-controls="browser-pane" aria-label="Compact list" aria-pressed="false" title="Compact list">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M15 5l-7 7 7 7" />
+            </svg>
+          </button>
+        </div>
         <div id="list-scroll" tabindex="0">
           <table>
             <colgroup>
@@ -160,6 +167,8 @@ import "../styles/global.css";
       const refreshBtn = document.getElementById("refresh-btn") as HTMLButtonElement;
       const downloadSelectedBtn = document.getElementById("download-selected-btn") as HTMLButtonElement;
       const selectAll = document.getElementById("select-all") as HTMLInputElement;
+      const browserPane = document.getElementById("browser-pane")!;
+      const compactBrowserBtn = document.getElementById("compact-browser-btn") as HTMLButtonElement;
       const listScroll = document.getElementById("list-scroll")!;
       const fileListEl = document.getElementById("file-list")!;
       const viewerTitle = document.getElementById("viewer-title")!;
@@ -177,6 +186,11 @@ import "../styles/global.css";
       let activeCsvView: CsvView | null = null;
       const summaryEl = document.getElementById("summary")!;
       const storageInfo = document.getElementById("storage-info")!;
+      compactBrowserBtn.onclick = () => {
+        const compact = browserPane.classList.toggle("compact");
+        compactBrowserBtn.setAttribute("aria-pressed", String(compact));
+        compactBrowserBtn.title = compact ? "Expand list" : "Compact list";
+      };
 
       let folderStack: { prefix: string; name: string }[] = [{ prefix: "", name: "Reports" }];
       let currentItems: R2Item[] = [];
@@ -546,7 +560,8 @@ import "../styles/global.css";
               csvTable ??= createCsvTable(csvSections);
               viewerBody.appendChild(csvTable);
             } else {
-              reportViewer = new AdjReportViewer(csvSections);
+              if (!currentFile) throw new Error("No file selected");
+              reportViewer = new AdjReportViewer(csvSections, currentFile.name.split("/").pop() ?? currentFile.name, csvText);
               reportViewer.render(viewerBody);
             }
           }

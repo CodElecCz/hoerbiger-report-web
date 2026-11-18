@@ -14,7 +14,9 @@ Folders and selections can be downloaded as ZIP files. Downloads are assembled i
 
 Filter reports by name, type, result, or date, and optionally search subfolders. NOK markers take precedence over OK. With filters active, selected folders contribute only matching files visible in the current results; enable subfolder search to include matching descendants.
 
-CSV previews provide Table and Text views. Sectioned reports retain their named sections, key/value fields, and `$Table` blocks with column units. ADJ reports also have a Report view that displays the Results values and plots measurement series grouped by unit against time. CSV content is fetched once per selection; changing views uses the cached content.
+Use the blue arrow above the file list to hide size, date, and time and give the report viewer more room. Select it again to restore the full list.
+
+CSV previews provide Table and Text views. Sectioned reports retain their named sections, key/value fields, and `$Table` blocks with column units. The ADJ Report view follows the station report with header, conditions, results, an Aeff limit check, step-specific Aeff charts, and a position/force chart. The overall result comes from the filename; the limit check is unavailable when its inputs are missing or invalid. CSV content is fetched once per selection; changing views uses the cached content.
 
 The footer displays bucket usage and remaining free-tier space from the Worker's authenticated `action=stats` response (`totalBytes`, `totalFiles`, and `limitBytes`). Usage refreshes after login and when the Refresh button is clicked.
 
