@@ -3,5 +3,5 @@ import { defineConfig } from 'astro/config';
 
 export default defineConfig({
   site: 'https://github.io',
-  base: '/hoerbiger-report-web',
+  base: '/hoerbiger-reports',
 });
