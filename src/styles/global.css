@@ -71,6 +71,7 @@ table { @apply w-full border-collapse text-[13px]; table-layout: fixed; font-fam
 #browser-pane td { @apply px-3 py-1.5 text-sm; }
 #browser-pane td.modified { @apply text-xs text-gray-500; }
 #browser-pane td.name .label { @apply truncate font-medium text-gray-800; }
+#browser-pane.compact td.name .label { @apply overflow-visible text-clip; white-space: normal; overflow-wrap: anywhere; }
 #browser-pane .dl-btn { width: 22px; height: 22px; }
 #browser-pane tbody tr { @apply cursor-pointer; transition: background-color 0.12s; }
 #browser-pane tbody tr:hover { @apply bg-gray-50; }
@@ -146,3 +147,44 @@ iframe { @apply h-full w-full border-0; }
 footer { @apply flex flex-wrap justify-between gap-x-4 gap-y-1 border-t border-solid border-slate-800 bg-slate-950 px-4 py-1 text-[12px] text-slate-400; font-family: Consolas, monospace; }
 #hint { @apply text-[11px] text-slate-500; font-family: system-ui, sans-serif; }
 #storage-info { @apply ml-auto; overflow-wrap: anywhere; }
+
+.eol-report { @apply rounded-md bg-[#eef1f6] p-3 text-slate-800; font-family: "Segoe UI", Arial, sans-serif; font-size: 13px; }
+.eol-banner { @apply flex flex-wrap items-center justify-between gap-2.5 rounded-t-md px-6 py-[18px] text-white; background: linear-gradient(135deg, #0f3d59, #2a7d8f); }
+.eol-banner h2 { @apply m-0 mb-1 text-xl font-bold tracking-[0.4px] text-white; }
+.eol-report-meta { @apply text-right text-xs; opacity: 0.9; overflow-wrap: anywhere; }
+.eol-result { @apply border-l-[6px] border-solid px-6 py-[9px] font-bold tracking-[0.4px]; font-size: 1.05em; }
+.eol-result-ok { @apply border-green-600 bg-green-100 text-green-900; background-color: #d4edda; color: #155724; border-color: #28a745; }
+.eol-result-nok { @apply border-red-600 bg-red-100 text-red-900; background-color: #f8d7da; color: #721c24; border-color: #dc3545; }
+.eol-result-error { @apply border-orange-500 bg-orange-100 text-orange-900; background-color: #fde8d9; color: #8a3b00; border-color: #ff8c00; }
+.eol-result-unknown { @apply border-slate-500 bg-slate-200 text-slate-700; background-color: #e2e3e5; color: #383d41; border-color: #6c757d; }
+.eol-card { @apply mt-3 overflow-hidden rounded-md bg-white; box-shadow: 0 1px 4px #0002; }
+.eol-card > summary { @apply flex cursor-pointer list-none items-center justify-between px-3.5 py-2 font-semibold text-white; background: #1f6f96; user-select: none; }
+.eol-card > summary:hover { background: #185a7b; }
+.eol-card > summary::-webkit-details-marker { display: none; }
+.eol-card > summary::after { content: "▼"; font-size: 15px; transition: transform 0.2s; }
+.eol-card:not([open]) > summary::after { transform: rotate(-90deg); }
+.eol-card-body { @apply p-3.5; }
+.eol-header-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.eol-report table { width: 100%; margin-top: 8px; border-collapse: collapse; font-size: 12px; }
+.eol-report th, .eol-report td { border: 1px solid #d5dde6; padding: 5px 8px; text-align: left; vertical-align: top; word-break: break-word; }
+.eol-report th { background: #e7f1f9; font-weight: 600; white-space: nowrap; }
+.eol-report tr:nth-child(even) td { background: #f8fbfe; }
+.eol-report .eol-key-value-table th:first-child { width: 34%; background: #f0f6fb; }
+.eol-report .eol-key-value-table th:nth-child(2) { width: 12%; }
+.eol-report .eol-nested-table { width: auto; min-width: 100%; margin-top: 0; }
+.eol-report .eol-nested-table th, .eol-report .eol-nested-table td { padding: 4px 6px; font-size: 11px; text-align: center; }
+.eol-report .eol-table-scroll { max-width: 100%; overflow: auto; }
+.eol-report .eol-results-table, .eol-report .eol-step-summary, .eol-report .eol-leakage-table { width: max-content; min-width: 100%; }
+.eol-report td.eol-check-ok { background: #dff3e5 !important; }
+.eol-report td.eol-check-nok { background: #f7d9dd !important; }
+.eol-report .eol-check-table { table-layout: auto; }
+.eol-report .eol-badge { @apply inline-block min-w-[34px] rounded-[10px] px-2 py-0.5 text-center text-[11px] font-bold text-white; }
+.eol-report .eol-badge-ok { @apply bg-green-600; }
+.eol-report .eol-badge-nok { @apply bg-red-600; }
+.eol-report .eol-badge-unknown { @apply bg-slate-500; }
+.eol-step-label { @apply mb-2 font-semibold; color: #0f6cc2; }
+.eol-report .eol-chart { @apply relative rounded border border-solid border-[#d5dde6] p-2; height: 280px; background: #fbfcfe; }
+.eol-report .eol-card-body h3 { @apply mb-1 mt-3 text-sm font-semibold text-slate-700; }
+@media (max-width: 980px) {
+  .eol-header-grid { grid-template-columns: minmax(0, 1fr); }
+}
