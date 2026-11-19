@@ -67,20 +67,18 @@ import "../styles/global.css";
         <div id="list-scroll" tabindex="0">
           <table>
             <colgroup>
-              <col style="width: 36px;" />
+              <col class="checkbox-column" style="width: 36px;" />
               <col />
-              <col style="width: 90px;" />
-              <col style="width: 105px;" />
-              <col style="width: 80px;" />
-              <col style="width: 44px;" />
+              <col class="size-column" style="width: 90px;" />
+              <col class="modified-column" style="width: 150px;" />
+              <col class="action-column" style="width: 44px;" />
             </colgroup>
             <thead>
               <tr>
                 <th class="nosort chk"><input type="checkbox" id="select-all" title="Select all" /></th>
                 <th data-sort="name">Name</th>
-                <th data-sort="size" class="num">Size</th>
-                <th data-sort="date">Date</th>
-                <th data-sort="time">Time</th>
+                <th data-sort="size" class="num size-column">Size</th>
+                <th data-sort="date" class="modified-column">Date modified</th>
                 <th class="nosort action"></th>
               </tr>
             </thead>
@@ -127,7 +125,7 @@ import "../styles/global.css";
       import { parseCsvReport, type CsvSection } from "../lib/csvReport";
       import { createCsvTable } from "../lib/csvTable";
 
-      type SortKey = "name" | "size" | "date" | "time";
+      type SortKey = "name" | "size" | "date";
       type CsvView = "report" | "table" | "text";
 
       const SVG_OPEN = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">';
@@ -275,12 +273,8 @@ import "../styles/global.css";
             r = Number(a.size ?? 0) - Number(b.size ?? 0);
             break;
           case "date":
-          case "time": {
-            const ta = a.modifiedTime?.getTime() ?? 0;
-            const tb = b.modifiedTime?.getTime() ?? 0;
-            r = sortKey === "date" ? ta - tb : (ta % 86400000) - (tb % 86400000);
+            r = (a.modifiedTime?.getTime() ?? 0) - (b.modifiedTime?.getTime() ?? 0);
             break;
-          }
           default:
             r = 0;
         }
@@ -333,7 +327,7 @@ import "../styles/global.css";
           const classes: string[] = [];
           if (idx === cursor) classes.push("cursor");
           if (!row.up && row.item.key === selectedId) classes.push("selected");
-          tr.className = classes.join(" ");
+          tr.className = ["group", ...classes].join(" ");
 
           const nameTd = document.createElement("td");
           nameTd.className = row.up || row.item.isFolder ? "name dir" : "name";
@@ -353,12 +347,13 @@ import "../styles/global.css";
           chkTd.className = "chk";
           chkTd.onclick = (e) => e.stopPropagation();
           if (row.up) {
-            tr.append(chkTd, nameTd, cell("", "num"), cell(""), cell(""), actionTd);
+            tr.append(chkTd, nameTd, cell("", "num size-column"), cell("", "modified modified-column"), actionTd);
           } else {
             const { item } = row;
             const d = item.modifiedTime;
             const chk = document.createElement("input");
             chk.type = "checkbox";
+            chk.className = "opacity-0 transition-opacity duration-150 group-hover:opacity-100 checked:opacity-100 focus-visible:opacity-100";
             chk.checked = checked.has(item.key);
             chk.setAttribute("aria-label", `Select ${item.name}`);
             chk.onchange = () => {
@@ -369,7 +364,7 @@ import "../styles/global.css";
             chkTd.appendChild(chk);
 
             const btn = document.createElement("button");
-            btn.className = "dl-btn";
+            btn.className = "dl-btn opacity-0 transition-opacity duration-150 group-hover:opacity-100 focus-visible:opacity-100";
             btn.title = item.isFolder ? `Download ${item.name} as .zip` : `Download ${item.name}`;
             btn.setAttribute("aria-label", btn.title);
             btn.innerHTML = ICON_DOWNLOAD;
@@ -392,9 +387,14 @@ import "../styles/global.css";
             tr.append(
               chkTd,
               nameTd,
-              cell(item.isFolder ? "" : formatSize(Number(item.size ?? 0)), "num"),
-              cell(d ? d.toLocaleDateString(undefined, { year: "numeric", month: "2-digit", day: "2-digit" }) : ""),
-              cell(d ? d.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" }) : ""),
+              cell(item.isFolder ? "" : formatSize(Number(item.size ?? 0)), "num size-column"),
+              cell(d ? d.toLocaleString(undefined, {
+                year: "numeric",
+                month: "2-digit",
+                day: "2-digit",
+                hour: "2-digit",
+                minute: "2-digit",
+              }) : "", "modified modified-column"),
               actionTd,
             );
           }
@@ -620,7 +620,7 @@ import "../styles/global.css";
       }
 
       listScroll.addEventListener("keydown", (e) => {
-        const page = Math.max(Math.floor(listScroll.clientHeight / 22) - 1, 1);
+        const page = Math.max(Math.floor(listScroll.clientHeight / 36) - 1, 1);
         const handlers: Record<string, () => void> = {
           ArrowDown: () => setCursor(cursor + 1),
           ArrowUp: () => setCursor(cursor - 1),

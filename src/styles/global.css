@@ -57,12 +57,24 @@ main { @apply flex flex-1 overflow-hidden bg-white text-slate-800; color-scheme:
 #compact-browser-btn svg { @apply h-[18px] w-[18px]; }
 #compact-browser-btn[aria-pressed="true"] svg { transform: rotate(180deg); }
 #compact-browser-btn:focus-visible { @apply outline-2 outline-offset-2 outline-blue-600; }
-#browser-pane.compact colgroup, #browser-pane.compact :is(th, td):nth-child(3),
-#browser-pane.compact :is(th, td):nth-child(4), #browser-pane.compact :is(th, td):nth-child(5) { display: none; }
+#browser-pane.compact .size-column, #browser-pane.compact .modified-column { display: none; }
 #browser-pane.compact th.chk { width: 36px; }
 #browser-pane.compact th.action { width: 44px; }
+#browser-pane th.chk, #browser-pane td.chk, #browser-pane th.action, #browser-pane td.action { @apply px-0 text-center; }
 #list-scroll { @apply flex-1 overflow-auto; outline: none; }
 table { @apply w-full border-collapse text-[13px]; table-layout: fixed; font-family: system-ui, -apple-system, sans-serif; }
+#browser-pane th, #browser-pane td { @apply border-b border-solid border-gray-100; border-top: 0; border-left: 0; border-right: 0; }
+#browser-pane th { @apply h-9 border-gray-200 bg-gray-50 px-3 py-0 text-xs font-medium text-gray-500; }
+#browser-pane th:hover { @apply bg-gray-100; }
+#browser-pane th.nosort:hover { @apply bg-gray-50; }
+#browser-pane th.num, #browser-pane td.num { @apply text-right text-xs text-gray-500; }
+#browser-pane td { @apply px-3 py-1.5 text-sm; }
+#browser-pane td.modified { @apply text-xs text-gray-500; }
+#browser-pane td.name .label { @apply truncate font-medium text-gray-800; }
+#browser-pane .dl-btn { width: 22px; height: 22px; }
+#browser-pane tbody tr { @apply cursor-pointer; transition: background-color 0.12s; }
+#browser-pane tbody tr:hover { @apply bg-gray-50; }
+#browser-pane tbody tr.selected, #browser-pane tbody tr.cursor { @apply bg-sky-100; }
 th, td { @apply overflow-hidden border-b border-solid border-slate-200 px-3.5 py-2.5 text-left; white-space: nowrap; text-overflow: ellipsis; }
 th { @apply sticky top-0 z-[1] cursor-pointer select-none bg-slate-50 font-semibold text-slate-600; }
 th:hover { @apply bg-slate-200; }
@@ -72,8 +84,7 @@ th.nosort:hover { @apply bg-slate-50; }
 td.name { @apply overflow-hidden text-ellipsis; white-space: nowrap; }
 td.name .name-content { @apply flex min-w-0 items-center gap-2.5; }
 td.name .label { @apply min-w-0 overflow-hidden text-ellipsis; white-space: nowrap; }
-#browser-pane.compact td.name .label { @apply overflow-visible text-clip; white-space: normal; overflow-wrap: anywhere; }
-td.dir .label { @apply font-bold text-slate-900; }
+td.dir .label { @apply font-medium text-gray-800; }
 td svg { @apply h-5 w-5 shrink-0; }
 tbody tr { @apply cursor-pointer select-none; transition: background 0.12s; }
 tbody tr:hover { @apply bg-slate-100; }
