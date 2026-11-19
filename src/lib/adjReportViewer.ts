@@ -10,11 +10,11 @@ type GraphSeries = {
 };
 
 const AEFF_SERIES: GraphSeries[] = [
-  { name: "Aeff Calc Actual", color: "#22d3ee", axis: "y" },
-  { name: "Aeff Meas Actual", color: "#34d399", axis: "y" },
-  { name: "Aeff Target", color: "#fbbf24", axis: "y", dash: [7, 5] },
-  { name: "Aeff Target Step", color: "#fb923c", axis: "y", dash: [2, 4] },
-  { name: "Position", color: "#a78bfa", axis: "yPosition" },
+  { name: "Aeff Calc Actual", color: "#0f6cc2", axis: "y" },
+  { name: "Aeff Meas Actual", color: "#18a06c", axis: "y" },
+  { name: "Aeff Target", color: "#c68500", axis: "y", dash: [7, 5] },
+  { name: "Aeff Target Step", color: "#8c4d15", axis: "y", dash: [2, 4] },
+  { name: "Position", color: "#7a4b2a", axis: "yPosition" },
 ];
 
 function card(title: string, open = true): { element: HTMLElement; body: HTMLElement } {
@@ -147,8 +147,8 @@ export class AdjReportViewer {
       this.addGraph(report, "Pre-Adjustment Graph (Steps 2–4)", measurement, AEFF_SERIES, [2, 3, 4]);
       this.addGraph(report, "Adjustment Graph (Steps 5–7)", measurement, AEFF_SERIES, [5, 6, 7]);
       this.addGraph(report, "Position & Force Graph", measurement, [
-        { name: "Position", color: "#22d3ee", axis: "y" },
-        { name: "Force", color: "#f472b6", axis: "yPosition" },
+        { name: "Position", color: "#e67e22", axis: "y" },
+        { name: "Force", color: "#8e44ad", axis: "yPosition" },
       ]);
       this.addMeasurements(report, measurement);
     } catch (error) {
@@ -220,23 +220,9 @@ export class AdjReportViewer {
         responsive: true,
         maintainAspectRatio: false,
         scales: {
-          x: {
-            type: "linear",
-            ticks: { color: "#94a3b8" },
-            grid: { color: "rgba(148, 163, 184, 0.16)" },
-            title: { display: true, text: `Time ${measurement.units[timeIndex] ?? ""}`.trim(), color: "#cbd5e1" },
-          },
-          y: {
-            ticks: { color: "#94a3b8" },
-            grid: { color: "rgba(148, 163, 184, 0.16)" },
-            title: { display: true, text: unitFor("y"), color: "#cbd5e1" },
-          },
-          yPosition: {
-            position: "right",
-            ticks: { color: "#94a3b8" },
-            grid: { drawOnChartArea: false, color: "rgba(148, 163, 184, 0.16)" },
-            title: { display: true, text: unitFor("yPosition"), color: "#cbd5e1" },
-          },
+          x: { type: "linear", title: { display: true, text: `Time ${measurement.units[timeIndex] ?? ""}`.trim() } },
+          y: { title: { display: true, text: unitFor("y") } },
+          yPosition: { position: "right", grid: { drawOnChartArea: false }, title: { display: true, text: unitFor("yPosition") } },
         },
       },
     }));
